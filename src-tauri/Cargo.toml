@@ -1,0 +1,91 @@
+[package]
+name = "ollama-desktop"
+version = "0.1.0"
+description = "Native Linux desktop client for Ollama"
+authors = ["you"]
+edition = "2021"
+rust-version = "1.77.2"   # CVE-2024-24576 minimum
+
+[lib]
+name = "ollama_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# ── Tauri core ─────────────────────────────────────────────────────────────
+tauri = { version = "2", features = ["tray-icon"] }
+
+# ── Tauri official plugins ──────────────────────────────────────────────────
+tauri-plugin-fs           = "2"
+tauri-plugin-dialog       = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-shell        = "2"
+tauri-plugin-log          = "2"
+
+# ── Async runtime ─────────────────────────────────────────────────────────
+tokio        = { version = "1", features = ["full"] }
+futures-util = "0.3"
+
+# ── HTTP client (Ollama API + streaming) ───────────────────────────────────
+reqwest = { version = "0.12", features = [
+  "json",
+  "stream",
+  "rustls-tls",
+], default-features = false }
+
+# ── SQLite persistence ─────────────────────────────────────────────────────
+rusqlite = { version = "0.31", features = [
+  "bundled",
+  "backup",
+] }
+
+# ── Secrets / keyring → Secret Service API ────────────────────────────────
+keyring = { version = "3", features = [
+  "async-secret-service",
+  "tokio",
+  "crypto-openssl",
+] }
+
+# ── Serialization ─────────────────────────────────────────────────────────
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+log        = "0.4"
+
+# ── Error handling ─────────────────────────────────────────────────────────
+thiserror = "1"
+anyhow    = "1"
+
+# ── Logging / tracing ─────────────────────────────────────────────────────
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# ── Input validation ──────────────────────────────────────────────────────
+validator = { version = "0.18", features = ["derive"] }
+
+# ── Utilities ─────────────────────────────────────────────────────────────
+uuid   = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+dunce  = "1"
+url    = "2"
+base64 = "0.22.1"
+ignore = "0.4.25"
+
+[dev-dependencies]
+tokio   = { version = "1", features = ["full", "test-util"] }
+mockall = "0.13"
+mockito = "1"
+tempfile = "3.27.0"
+tauri = { version = "2", features = ["test"] }
+
+
+[profile.dev]
+incremental = true
+
+[profile.release]
+codegen-units = 1
+lto           = true
+opt-level     = "s"
+strip         = true
