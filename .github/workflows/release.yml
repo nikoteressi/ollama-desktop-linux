@@ -190,8 +190,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
-          # printf '%s\n' ensures trailing newline — OpenSSH libcrypto requires it
-          printf '%s\n' "$AUR_SSH_KEY" > ~/.ssh/aur_id
+          # Strip CR (CRLF → LF) — OpenSSH libcrypto rejects keys with Windows line endings
+          printf '%s\n' "$AUR_SSH_KEY" | tr -d '\r' > ~/.ssh/aur_id
           chmod 600 ~/.ssh/aur_id
           ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
 
@@ -256,17 +256,21 @@ jobs:
           GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_ID: ${{ secrets.GPG_KEY_ID }}
         run: |
-          # Support both raw armored key and base64-encoded key
-          if printf '%s' "$GPG_KEY" | grep -qE "^-+BEGIN"; then
-            printf '%s\n' "$GPG_KEY" | gpg --batch --import
+          # Strip CR (CRLF → LF), detect format, import
+          CLEAN_KEY=$(printf '%s\n' "$GPG_KEY" | tr -d '\r')
+          if printf '%s' "$CLEAN_KEY" | grep -qE "^-+BEGIN"; then
+            printf '%s\n' "$CLEAN_KEY" | gpg --batch --import
           else
-            printf '%s\n' "$GPG_KEY" | base64 -d | gpg --batch --import
+            # base64-encoded key; --ignore-garbage tolerates any stray whitespace
+            printf '%s\n' "$CLEAN_KEY" | base64 --decode --ignore-garbage | gpg --batch --import
           fi
-          # --import-ownertrust needs the full 40-char fingerprint, not a key ID.
-          # Look it up from the just-imported key so GPG_KEY_ID can be any format.
-          FP=$(gpg --with-colons --fingerprint "$GPG_ID" 2>/dev/null \
+          # Derive the full 40-char fingerprint from the keyring (avoids GPG_ID format issues)
+          # Use if/fi so a missing fingerprint doesn't propagate exit code 1
+          FP=$(gpg --list-secret-keys --with-colons 2>/dev/null \
                | awk -F: '$1=="fpr"{print $10; exit}')
-          [[ -n "$FP" ]] && printf '%s:6:\n' "$FP" | gpg --import-ownertrust
+          if [[ -n "$FP" ]]; then
+            printf '%s:6:\n' "$FP" | gpg --import-ownertrust
+          fi
 
       - name: Download .deb from release
         if: steps.guard.outputs.run == 'true'
