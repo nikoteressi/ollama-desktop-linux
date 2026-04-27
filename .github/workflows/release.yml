@@ -364,17 +364,21 @@ jobs:
             done
           done
 
+          # Derive fingerprint from keyring (GPG_ID format varies; fingerprint is stable)
+          FP=$(gpg --list-secret-keys --with-colons 2>/dev/null \
+               | awk -F: '$1=="fpr"{print $10; exit}')
+
           # Sign Release
           GPG_OPTS="--batch --yes --no-tty --pinentry-mode loopback"
           # shellcheck disable=SC2086
-          gpg $GPG_OPTS --default-key "$GPG_ID" \
+          gpg $GPG_OPTS --default-key "$FP" \
             --clearsign -o "${APT_ROOT}/dists/stable/InRelease" "${RELEASE}"
           # shellcheck disable=SC2086
-          gpg $GPG_OPTS --default-key "$GPG_ID" \
+          gpg $GPG_OPTS --default-key "$FP" \
             --detach-sign --armor -o "${APT_ROOT}/dists/stable/Release.gpg" "${RELEASE}"
 
-          # Export public key for users to download
-          gpg --armor --export "$GPG_ID" > "${APT_ROOT}/key.gpg"
+          # Export public key for users to download (use fingerprint — export by ID silently fails)
+          gpg --armor --export "$FP" > "${APT_ROOT}/key.gpg"
 
       - name: Commit and push to gh-pages
         if: steps.guard.outputs.run == 'true'
