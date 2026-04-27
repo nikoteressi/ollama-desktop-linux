@@ -3,7 +3,7 @@ name = "alpaka-desktop"
 version = "1.0.0"
 description = "Native desktop client for Ollama"
 authors = ["nikoteressi@gmail.com"]
-edition = "2026"
+edition = "2021"
 rust-version = "1.77.2"   # CVE-2024-24576 minimum
 
 [lib]

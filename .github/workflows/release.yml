@@ -31,7 +31,7 @@ jobs:
           toolchain: stable
 
       - name: Cache Rust build artifacts
-        uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2e0e3d3e3094bf  # v2.7.8
+        uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
 
