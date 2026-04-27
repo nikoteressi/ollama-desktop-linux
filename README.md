@@ -51,35 +51,48 @@ chmod +x alpaka-desktop_*.AppImage
 
 To integrate with your desktop launcher, run with `--appimage-integrate`.
 
-### Debian / Ubuntu (.deb)
+### Debian / Ubuntu — APT repository
 
+Add the repository once, then use `apt` like any other package:
+
+```bash
+# Import signing key
+curl -fsSL https://nikoteressi.github.io/alpaka-desktop/apt/key.gpg \
+  | sudo gpg --dearmor -o /etc/apt/keyrings/alpaka-desktop.gpg
+
+# Add repository
+echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/alpaka-desktop.gpg] \
+https://nikoteressi.github.io/alpaka-desktop/apt stable main" \
+  | sudo tee /etc/apt/sources.list.d/alpaka-desktop.list
+
+# Install
+sudo apt update && sudo apt install alpaka-desktop
+```
+
+Future updates arrive automatically with `sudo apt upgrade`.
+
+**One-off .deb install** (no repository needed):
 ```bash
 sudo dpkg -i alpaka-desktop_*_amd64.deb
 ```
 
-### Arch Linux — pacman (local build)
+### Arch Linux — AUR
 
-The fastest way on Arch is to build a native `.pkg.tar.zst` directly from the repo:
+```bash
+yay -S alpaka-desktop-bin      # installs the pre-built AppImage
+# or
+yay -S alpaka-desktop-git      # builds from source
+```
+
+### Arch Linux — local pacman build
+
+Build a native `.pkg.tar.zst` directly from the repo (no AUR helper required):
 
 ```bash
 git clone https://github.com/nikoteressi/alpaka-desktop.git
 cd alpaka-desktop
-./packaging/build-pacman.sh          # produces packaging/out/alpaka-desktop-*.pkg.tar.zst
+./packaging/build-pacman.sh
 sudo pacman -U packaging/out/alpaka-desktop-*.pkg.tar.zst
-```
-
-> Requires: `base-devel`, `rust`, `nodejs`, `pnpm` — all available in the official repos or `pnpm` via npm.
-
-### Arch Linux — AUR (coming soon)
-
-An AUR package (`alpaka-desktop-bin`) is planned. The PKGBUILD is ready in
-[`packaging/aur/`](packaging/aur/) — contributions to publish it on AUR are welcome.
-Once live, installation will be:
-
-```bash
-yay -S alpaka-desktop-bin      # pre-built AppImage
-# or
-yay -S alpaka-desktop-git      # build from source
 ```
 
 ---

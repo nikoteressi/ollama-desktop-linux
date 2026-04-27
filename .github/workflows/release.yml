@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   release-linux:
@@ -123,3 +125,210 @@ jobs:
             ${{ steps.checksums.outputs.checksum_file }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ======================================================================== #
+  # Publish PKGBUILD to the Arch User Repository                             #
+  #                                                                           #
+  # Requires secret: AUR_SSH_PRIVATE_KEY                                     #
+  #   Generate: ssh-keygen -t ed25519 -f ~/.ssh/aur_key                      #
+  #   Register public key at https://aur.archlinux.org/account/              #
+  # ======================================================================== #
+  publish-aur:
+    name: Publish to AUR
+    needs: release-linux
+    runs-on: ubuntu-latest
+    if: ${{ secrets.AUR_SSH_PRIVATE_KEY != '' }}
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Get version and AppImage sha256
+        id: info
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          gh release download "${GITHUB_REF_NAME}" --pattern sha256sums.txt -D /tmp/
+          SHA=$(grep AppImage /tmp/sha256sums.txt | awk '{print $1}')
+          echo "appimage_sha=${SHA}" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Patch PKGBUILD with new version and checksum
+        run: |
+          VERSION="${{ steps.info.outputs.version }}"
+          SHA="${{ steps.info.outputs.appimage_sha }}"
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" packaging/aur/PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" packaging/aur/PKGBUILD
+          sed -i "s/sha256sums=.*/sha256sums=('${SHA}')/" packaging/aur/PKGBUILD
+
+      - name: Generate .SRCINFO (requires makepkg from Arch Linux)
+        run: |
+          docker run --rm \
+            -v "$(pwd)/packaging/aur:/pkg" \
+            archlinux/archlinux:base-devel \
+            bash -c "
+              pacman -Sy --noconfirm --needed base-devel >/dev/null 2>&1
+              useradd -m builder
+              chown -R builder:builder /pkg
+              su - builder -c 'cd /pkg && makepkg --printsrcinfo > /pkg/.SRCINFO'
+            "
+
+      - name: Push to AUR
+        run: |
+          set -euo pipefail
+          # SSH setup
+          mkdir -p ~/.ssh
+          printf '%s' "$AUR_SSH_KEY" > ~/.ssh/aur_id
+          chmod 600 ~/.ssh/aur_id
+          ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
+
+          GIT_SSH="ssh -i ~/.ssh/aur_id -o StrictHostKeyChecking=yes"
+
+          # Clone (first push creates the package on AUR if it doesn't exist yet)
+          GIT_SSH_COMMAND="$GIT_SSH" \
+            git clone ssh://aur@aur.archlinux.org/alpaka-desktop-bin.git /tmp/aur-repo
+
+          cp packaging/aur/PKGBUILD packaging/aur/.SRCINFO /tmp/aur-repo/
+
+          cd /tmp/aur-repo
+          git config user.email "nikoteressi@gmail.com"
+          git config user.name "nikoteressi"
+          git add PKGBUILD .SRCINFO
+
+          # Skip push if nothing changed (e.g. re-tagging)
+          git diff --cached --quiet && echo "AUR already up to date, skipping." && exit 0
+
+          git commit -m "Update to ${{ github.ref_name }}"
+          GIT_SSH_COMMAND="$GIT_SSH" git push
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+
+  # ======================================================================== #
+  # Publish APT repository to GitHub Pages                                   #
+  #                                                                           #
+  # Requires secrets:                                                         #
+  #   GPG_PRIVATE_KEY  — base64-encoded GPG private key                      #
+  #   GPG_KEY_ID       — GPG key fingerprint (long format)                   #
+  #                                                                           #
+  # Generate:                                                                 #
+  #   gpg --batch --gen-key (see README § Contributing)                      #
+  #   gpg --export-secret-keys --armor <ID> | base64 -w0                     #
+  #                                                                           #
+  # Users add this repo once:                                                 #
+  #   curl -fsSL https://<pages-url>/apt/key.gpg | sudo gpg --dearmor \      #
+  #     -o /etc/apt/keyrings/alpaka-desktop.gpg                              #
+  #   echo "deb [arch=amd64 signed-by=...] <pages-url>/apt stable main" \    #
+  #     | sudo tee /etc/apt/sources.list.d/alpaka-desktop.list               #
+  #   sudo apt update && sudo apt install alpaka-desktop                     #
+  # ======================================================================== #
+  publish-apt-repo:
+    name: Publish APT Repository
+    needs: release-linux
+    runs-on: ubuntu-latest
+    if: ${{ secrets.GPG_PRIVATE_KEY != '' && secrets.GPG_KEY_ID != '' }}
+
+    steps:
+      - name: Install APT repo tools
+        run: sudo apt-get install -y --no-install-recommends dpkg-dev apt-utils
+
+      - name: Import GPG signing key
+        run: |
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | base64 -d | \
+            gpg --batch --import --passphrase '' 2>/dev/null || \
+            echo "${{ secrets.GPG_PRIVATE_KEY }}" | base64 -d | gpg --batch --import
+          echo "${{ secrets.GPG_KEY_ID }}:6:" | gpg --import-ownertrust
+
+      - name: Download .deb from release
+        run: |
+          gh release download "${{ github.ref_name }}" --pattern "*.deb" -D /tmp/release/
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout or create gh-pages branch
+        run: |
+          set -euo pipefail
+          REMOTE="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+
+          if git ls-remote --exit-code --heads "$REMOTE" gh-pages >/dev/null 2>&1; then
+            git clone --depth=1 --branch=gh-pages "$REMOTE" /tmp/gh-pages
+          else
+            mkdir /tmp/gh-pages
+            cd /tmp/gh-pages
+            git init
+            git remote add origin "$REMOTE"
+            git checkout --orphan gh-pages
+            echo "# Alpaka Desktop Package Repositories" > README.md
+            touch .nojekyll
+            git add README.md .nojekyll
+            git -c user.email="github-actions@github.com" \
+                -c user.name="GitHub Actions" \
+                commit -m "Initialize gh-pages"
+          fi
+
+      - name: Update APT repository
+        run: |
+          set -euo pipefail
+          DEB_FILE=$(find /tmp/release/ -name "*.deb" | head -n1)
+          DEB_NAME=$(basename "$DEB_FILE")
+
+          APT_ROOT=/tmp/gh-pages/apt
+          POOL="${APT_ROOT}/pool/main/a/alpaka-desktop"
+          DISTS="${APT_ROOT}/dists/stable/main/binary-amd64"
+
+          mkdir -p "${POOL}" "${DISTS}"
+
+          # Add this release's .deb to the pool (keep older versions too)
+          cp "$DEB_FILE" "${POOL}/${DEB_NAME}"
+
+          # Regenerate Packages index from the full pool
+          cd "${APT_ROOT}"
+          dpkg-scanpackages --arch amd64 pool/ /dev/null > dists/stable/main/binary-amd64/Packages
+          gzip -9kf dists/stable/main/binary-amd64/Packages
+
+          # Build Release file with checksums
+          RELEASE="${APT_ROOT}/dists/stable/Release"
+          cat > "${RELEASE}" <<EOF
+          Origin: Alpaka Desktop
+          Label: Alpaka Desktop
+          Suite: stable
+          Codename: stable
+          Architectures: amd64
+          Components: main
+          Description: Alpaka Desktop APT repository
+          Date: $(date -Ru)
+          EOF
+
+          # Append checksum sections
+          for HASH in MD5Sum SHA1 SHA256; do
+            echo "${HASH}:" >> "${RELEASE}"
+            for F in dists/stable/main/binary-amd64/Packages dists/stable/main/binary-amd64/Packages.gz; do
+              SIZE=$(wc -c < "$F")
+              case "$HASH" in
+                MD5Sum) SUM=$(md5sum    "$F" | awk '{print $1}') ;;
+                SHA1)   SUM=$(sha1sum   "$F" | awk '{print $1}') ;;
+                SHA256) SUM=$(sha256sum "$F" | awk '{print $1}') ;;
+              esac
+              printf " %s %16s %s\n" "$SUM" "$SIZE" "${F#dists/stable/}" >> "${RELEASE}"
+            done
+          done
+
+          # Sign Release
+          GPG_OPTS="--batch --no-tty --pinentry-mode loopback"
+          gpg ${GPG_OPTS} --default-key "${{ secrets.GPG_KEY_ID }}" \
+            --clearsign -o "${APT_ROOT}/dists/stable/InRelease" "${RELEASE}"
+          gpg ${GPG_OPTS} --default-key "${{ secrets.GPG_KEY_ID }}" \
+            --detach-sign --armor -o "${APT_ROOT}/dists/stable/Release.gpg" "${RELEASE}"
+
+          # Export public key so users can download it
+          gpg --armor --export "${{ secrets.GPG_KEY_ID }}" > "${APT_ROOT}/key.gpg"
+
+      - name: Commit and push gh-pages
+        run: |
+          cd /tmp/gh-pages
+          git config user.email "github-actions@github.com"
+          git config user.name "GitHub Actions"
+          git add apt/
+          git diff --cached --quiet && echo "No changes to APT repo." && exit 0
+          git commit -m "apt: add ${{ github.ref_name }}"
+          git push origin gh-pages
