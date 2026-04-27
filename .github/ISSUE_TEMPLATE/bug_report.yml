@@ -1,0 +1,97 @@
+name: Bug Report
+description: Report a bug or unexpected behaviour in Alpaka Desktop.
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in as much detail as possible so we can reproduce and fix it quickly.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear and concise description of the bug.
+      placeholder: "When I do X, Y happens instead of Z."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact steps to reliably reproduce the issue.
+      placeholder: |
+        1. Open Alpaka Desktop
+        2. Select model '...'
+        3. Type '...' and press Enter
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Alpaka Desktop version
+      description: Found in the About dialog or the release tag.
+      placeholder: "v1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Linux distribution
+      options:
+        - Arch Linux
+        - Ubuntu 22.04
+        - Ubuntu 24.04
+        - Fedora
+        - Debian
+        - Other (describe below)
+    validations:
+      required: true
+
+  - type: input
+    id: desktop
+    attributes:
+      label: Desktop environment / display server
+      placeholder: "KDE Plasma 6 / Wayland"
+    validations:
+      required: false
+
+  - type: input
+    id: ollama
+    attributes:
+      label: Ollama version
+      placeholder: "0.6.x"
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or error messages
+      description: Paste any console output, Tauri logs, or error dialogs here.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, screen recordings, or any other relevant information.
+    validations:
+      required: false

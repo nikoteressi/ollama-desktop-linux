@@ -1,0 +1,111 @@
+# Maintainer: Niko Teressi <nikoteressi@gmail.com>
+# Contributor: Alpaka Desktop Contributors
+#
+# Build from the latest git tag.
+# For the pre-built binary package see: packaging/aur/PKGBUILD (alpaka-desktop-bin)
+
+pkgname=alpaka-desktop-git
+pkgver=1.0.0.r0.g0000000
+pkgrel=1
+pkgdesc="Native Linux desktop client for Ollama — built with Tauri v2 and Vue 3"
+arch=('x86_64')
+url="https://github.com/nikoteressi/alpaka-desktop"
+license=('MIT')
+depends=(
+    'webkit2gtk-4.1'
+    'gtk3'
+    'libappindicator-gtk3'
+    'libsoup3'
+    'glib2'
+    'libsecret'
+    'xdg-desktop-portal'
+)
+makedepends=(
+    'rust'
+    'cargo'
+    'pnpm'
+    'nodejs'
+    'libwebkit2gtk-4.1'
+    'libappindicator-gtk3'
+    'librsvg'
+    'patchelf'
+    'openssl'
+    'gtk3'
+)
+optdepends=(
+    'xdg-desktop-portal-kde: KDE-native file dialogs on Plasma'
+    'xdg-desktop-portal-gtk: GNOME-native file dialogs'
+    'kwallet: KDE Plasma keyring backend for secret storage'
+    'gnome-keyring: GNOME keyring backend for secret storage'
+    'keepassxc: Alternative keyring backend via D-Bus Secret Service'
+)
+provides=('alpaka-desktop')
+conflicts=('alpaka-desktop' 'alpaka-desktop-bin')
+source=("$pkgname::git+https://github.com/nikoteressi/alpaka-desktop.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "$pkgname"
+    # Produces versions like 1.0.0.r12.gabcdef1 from annotated tags.
+    git describe --long --tags --abbrev=7 2>/dev/null \
+        | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g' \
+        || printf "r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+}
+
+prepare() {
+    cd "$pkgname"
+
+    # Fetch all Rust crate dependencies so the build step can run with
+    # predictable network usage. makepkg allows network in prepare().
+    cargo fetch --locked --target "$(rustc -vV | awk '/host/ {print $2}')" 2>/dev/null || cargo fetch
+
+    # Install Node.js dependencies.
+    pnpm install --frozen-lockfile
+}
+
+build() {
+    cd "$pkgname"
+
+    # Set CARGO_HOME inside the source tree to leverage makepkg's cache.
+    export CARGO_INCREMENTAL=0
+    export TAURI_SIGNING_PRIVATE_KEY=""  # disable auto-updater signing for AUR builds
+
+    pnpm tauri build --bundles deb,appimage
+}
+
+package() {
+    cd "$pkgname"
+
+    # ── Desktop entry & icon ────────────────────────────────────────────────
+    local bundle_dir="src-tauri/target/release/bundle"
+
+    # Install .deb-extracted resources (most reliable source for desktop entry/icons)
+    local deb_dir
+    deb_dir=$(find "$bundle_dir/deb" -maxdepth 1 -name "*.deb" | head -1)
+    if [[ -n "$deb_dir" ]]; then
+        # Extract .deb to a temp location to harvest the install tree
+        local tmp_deb="$srcdir/deb_extract"
+        mkdir -p "$tmp_deb"
+        ar x "$deb_dir" --output="$tmp_deb"
+        if [[ -f "$tmp_deb/data.tar.zst" ]]; then
+            tar -xf "$tmp_deb/data.tar.zst" -C "$tmp_deb"
+        elif [[ -f "$tmp_deb/data.tar.xz" ]]; then
+            tar -xJf "$tmp_deb/data.tar.xz" -C "$tmp_deb"
+        fi
+        # Copy the full install tree into $pkgdir
+        cp -r "$tmp_deb/usr" "$pkgdir/"
+    fi
+
+    # ── Main binary (from AppImage or release binary) ───────────────────────
+    if [[ ! -f "$pkgdir/usr/bin/alpaka-desktop" ]]; then
+        # Fall back to installing the bare release binary
+        install -Dm755 "src-tauri/target/release/alpaka-desktop" \
+            "$pkgdir/usr/bin/alpaka-desktop"
+    fi
+
+    # ── LICENSE ─────────────────────────────────────────────────────────────
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+    # ── README ──────────────────────────────────────────────────────────────
+    install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}

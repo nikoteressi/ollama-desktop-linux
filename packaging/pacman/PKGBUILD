@@ -1,0 +1,116 @@
+# Maintainer: Niko Teressi <nikoteressi@gmail.com>
+
+pkgname=alpaka-desktop
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Native Tauri v2 desktop client for Ollama — Arch Linux / KDE Plasma 6 / Wayland"
+arch=('x86_64')
+url="https://github.com/nikoteressi/alpaka-desktop"
+license=('MIT')
+
+makedepends=(
+    'rust'
+    'pnpm'
+    'nodejs'
+    'webkit2gtk-4.1'
+    'libappindicator-gtk3'
+    'librsvg'
+    'patchelf'
+    'openssl'
+    'gtk3'
+)
+
+depends=(
+    'webkit2gtk-4.1'
+    'gtk3'
+    'libappindicator-gtk3'
+    'libsoup3'
+    'glib2'
+    'libsecret'
+    'xdg-desktop-portal'
+)
+
+optdepends=(
+    'xdg-desktop-portal-kde: KDE Plasma portal backend'
+    'xdg-desktop-portal-gtk: GTK portal backend'
+    'kwallet: KDE secret storage backend'
+    'gnome-keyring: GNOME secret storage backend'
+    'keepassxc: KeePassXC secret storage backend'
+)
+
+source=("$pkgname-$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cd "$srcdir/$pkgname-$pkgver"
+    export CARGO_INCREMENTAL=0
+    export TAURI_SIGNING_PRIVATE_KEY=""
+    pnpm install --frozen-lockfile
+    pnpm tauri build
+}
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+
+    # --- Binary ---
+    install -Dm755 "src-tauri/target/release/$pkgname" \
+        "$pkgdir/usr/bin/$pkgname"
+
+    # --- Resources from .deb bundle (preferred path) ---
+    local _deb
+    _deb="$(find src-tauri/target/release/bundle/deb -name '*.deb' 2>/dev/null | head -n1)"
+
+    if [[ -n "$_deb" ]]; then
+        local _deb_abs="$PWD/$_deb"
+        local _debdir
+        _debdir="$(mktemp -d)"
+        (
+            cd "$_debdir"
+            ar x "$_deb_abs"
+            tar xf data.tar.*
+        )
+        # Copy the full usr/ tree from the deb into the package
+        if [[ -d "$_debdir/usr" ]]; then
+            cp -a "$_debdir/usr/." "$pkgdir/usr/"
+        fi
+        rm -rf "$_debdir"
+    else
+        # --- Fallback: manual installation of desktop entry and icons ---
+
+        # Desktop entry
+        install -dm755 "$pkgdir/usr/share/applications"
+        cat > "$pkgdir/usr/share/applications/$pkgname.desktop" <<EOF
+[Desktop Entry]
+Name=Alpaka Desktop
+Comment=Native Linux desktop client for Ollama
+Exec=alpaka-desktop
+Icon=alpaka-desktop
+Terminal=false
+Type=Application
+Categories=Network;Chat;AI;
+EOF
+
+        # Icons from src-tauri/icons/
+        local _icondir="src-tauri/icons"
+        if [[ -f "$_icondir/32x32.png" ]]; then
+            install -Dm644 "$_icondir/32x32.png" \
+                "$pkgdir/usr/share/icons/hicolor/32x32/apps/$pkgname.png"
+        fi
+        if [[ -f "$_icondir/128x128.png" ]]; then
+            install -Dm644 "$_icondir/128x128.png" \
+                "$pkgdir/usr/share/icons/hicolor/128x128/apps/$pkgname.png"
+        fi
+        if [[ -f "$_icondir/128x128@2x.png" ]]; then
+            install -Dm644 "$_icondir/128x128@2x.png" \
+                "$pkgdir/usr/share/icons/hicolor/256x256/apps/$pkgname.png"
+        fi
+    fi
+
+    # --- License ---
+    install -Dm644 LICENSE \
+        "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+    # --- Documentation ---
+    install -Dm644 README.md \
+        "$pkgdir/usr/share/doc/$pkgname/README.md"
+}

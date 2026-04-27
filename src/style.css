@@ -1,0 +1,387 @@
+@import "tailwindcss";
+
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║  OLLAMA DESIGN TOKEN SYSTEM                                  ║
+   ║  HOW TO ADD A NEW THEME:                                     ║
+   ║  1. Copy one [data-theme="…"] block below                    ║
+   ║  2. Change the selector to your theme name                   ║
+   ║  3. Override only the tokens you need — all others inherit   ║
+   ║  4. Add it to THEME_OPTIONS in useTheme / SettingsPage       ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+
+/* ── DARK (default) ─────────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-base: #1a1a1a;
+  --bg-surface: #212121;
+  --bg-elevated: #262626;
+  --bg-hover: #2a2a2a;
+  --bg-active: #303030;
+  --bg-input: #1e1e1e;
+  --bg-user-msg: #2d2d2d;
+  --bg-code: #111111;
+  --bg-code-hdr: rgba(255, 255, 255, 0.025);
+  --bg-glass: rgba(26, 26, 26, 0.70);
+
+  /* Borders */
+  --border: #242424;
+  --border-subtle: #2a2a2a;
+  --border-strong: #383838;
+  --border-focus: #4a80d0;
+
+  /* Text */
+  --text: #e8e8e8;
+  --text-muted: #888888;
+  --text-dim: #555555;
+  --text-heading: #f0f0f0;
+  --text-code: #cdd6f4;
+
+  /* Accent (blue) */
+  --accent: #4a80d0;
+  --accent-hover: #5a90e0;
+  --accent-muted: rgba(74, 128, 208, 0.15);
+  --accent-border: rgba(74, 128, 208, 0.30);
+
+  /* Semantic */
+  --danger: #e06060;
+  --danger-muted: rgba(224, 96, 96, 0.10);
+  --success: #5bc97a;
+  --warning: #f59e0b;
+
+  /* Model tag colours */
+  --tag-vision-bg: rgba(88, 101, 242, 0.12);
+  --tag-vision-text: #8c9eff;
+  --tag-tools-bg: rgba(245, 158, 11, 0.10);
+  --tag-tools-text: #fbbf24;
+  --tag-thinking-bg: rgba(168, 85, 247, 0.12);
+  --tag-thinking-text: #c084fc;
+  --tag-cloud-bg: rgba(16, 185, 129, 0.12);
+  --tag-cloud-text: #34d399;
+  --tag-embed-bg: rgba(236, 72, 153, 0.12);
+  --tag-embed-text: #f472b6;
+  --tag-audio-bg: rgba(20, 184, 166, 0.12);
+  --tag-audio-text: #2dd4bf;
+  --tag-generic-bg: rgba(255, 255, 255, 0.07);
+  --tag-generic-text: #94a3b8;
+  --tag-quant-bg: rgba(255, 255, 255, 0.04);
+  --tag-quant-text: #64748b;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.40);
+  --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.65);
+
+  /* Scrollbar */
+  --scrollbar: rgba(255, 255, 255, 0.07);
+  --scrollbar-hover: rgba(255, 255, 255, 0.13);
+
+  color-scheme: dark;
+
+  /* ── Backward-compat aliases for existing components ── */
+  --bg: var(--bg-base);
+  --bg-chat: var(--bg-base);
+  --border-muted: var(--border-subtle);
+  --code-bg: var(--bg-code);
+  --accent-bg: var(--accent-muted);
+  --accent-secondary: var(--accent);
+  --social-bg: var(--bg-surface);
+  --shadow: var(--shadow-md);
+  --text-h: var(--text-heading);
+}
+
+/* ── LIGHT ──────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg-base: #f0f0f0;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-hover: #ebebeb;
+  --bg-active: #e2e2e2;
+  --bg-input: #ffffff;
+  --bg-user-msg: #e4e4e4;
+  --bg-code: #f6f8fa;
+  --bg-code-hdr: rgba(0, 0, 0, 0.03);
+  --bg-glass: rgba(240, 240, 240, 0.80);
+
+  --border: #e0e0e0;
+  --border-subtle: #ebebeb;
+  --border-strong: #cccccc;
+  --border-focus: #4a80d0;
+
+  --text: #111111;
+  --text-muted: #666666;
+  --text-dim: #aaaaaa;
+  --text-heading: #000000;
+  --text-code: #24292e;
+
+  --accent: #4a80d0;
+  --accent-hover: #3a70c0;
+  --accent-muted: rgba(74, 128, 208, 0.10);
+  --accent-border: rgba(74, 128, 208, 0.25);
+
+  --danger: #dc2626;
+  --danger-muted: rgba(220, 38, 38, 0.08);
+  --success: #16a34a;
+  --warning: #d97706;
+
+  --tag-generic-bg: rgba(0, 0, 0, 0.06);
+  --tag-generic-text: #64748b;
+  --tag-quant-bg: rgba(0, 0, 0, 0.04);
+  --tag-quant-text: #94a3b8;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.07);
+  --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.10);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.14);
+
+  --scrollbar: rgba(0, 0, 0, 0.10);
+  --scrollbar-hover: rgba(0, 0, 0, 0.20);
+
+  color-scheme: light;
+
+  --bg: var(--bg-base);
+  --bg-chat: var(--bg-base);
+  --border-muted: var(--border-subtle);
+  --code-bg: var(--bg-code);
+  --accent-bg: var(--accent-muted);
+  --accent-secondary: var(--accent);
+  --social-bg: var(--bg-surface);
+  --shadow: var(--shadow-md);
+  --text-h: var(--text-heading);
+}
+
+/* ── TYPOGRAPHY ─────────────────────────────────────────────── */
+:root {
+  --sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --heading: 'Outfit', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+
+  font: 16px/1.6 var(--sans);
+  letter-spacing: -0.011em;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--text);
+  background: var(--bg-base);
+}
+
+/* ── SMOOTH THEME TRANSITION ────────────────────────────────── */
+*,
+*::before,
+*::after {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+svg *,
+canvas {
+  transition: none !important;
+}
+
+/* ── LAYOUT ─────────────────────────────────────────────────── */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── SCROLLBARS ─────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
+}
+
+/* ── MODEL TAG BADGES ───────────────────────────────────────── */
+.model-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: lowercase;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  line-height: 1.6;
+}
+
+.tag-vision {
+  background: var(--tag-vision-bg);
+  color: var(--tag-vision-text);
+}
+
+.tag-tools {
+  background: var(--tag-tools-bg);
+  color: var(--tag-tools-text);
+}
+
+.tag-thinking {
+  background: var(--tag-thinking-bg);
+  color: var(--tag-thinking-text);
+}
+
+.tag-cloud {
+  background: var(--tag-cloud-bg);
+  color: var(--tag-cloud-text);
+}
+
+.tag-embedding {
+  background: var(--tag-embed-bg);
+  color: var(--tag-embed-text);
+}
+
+.tag-audio {
+  background: var(--tag-audio-bg);
+  color: var(--tag-audio-text);
+}
+
+.tag-size,
+.tag-generic {
+  background: var(--tag-generic-bg);
+  color: var(--tag-generic-text);
+}
+
+.tag-quant {
+  background: var(--tag-quant-bg);
+  color: var(--tag-quant-text);
+  font-family: var(--mono);
+  font-weight: 400;
+}
+
+/* ── CLOUD / ACTION BUTTON ──────────────────────────────────── */
+.model-cloud-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  border-radius: 99px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.model-cloud-btn:hover {
+  background: var(--accent);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--accent-muted);
+}
+
+/* ── CUSTOM SELECT ──────────────────────────────────────────── */
+.custom-select-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.custom-select {
+  appearance: none;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px 28px 4px 12px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.custom-select:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+.custom-select-container::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid var(--text-muted);
+  border-bottom: 1.5px solid var(--text-muted);
+  transform: rotate(45deg) translateY(-50%);
+  top: 42%;
+  pointer-events: none;
+}
+
+/* ── ANIMATIONS ─────────────────────────────────────────────── */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-opacity {
+
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ── THEMED ASSETS ──────────────────────────────────────────── */
+/* Use filters to adapt PNGs to theme while keeping literal pixels */
+[data-theme="light"] .themed-logo {
+  filter: invert(0.4) brightness(0.5) contrast(1.1);
+  opacity: 0.9;
+}
+
+.themed-logo {
+  transition: filter 0.2s ease;
+}
