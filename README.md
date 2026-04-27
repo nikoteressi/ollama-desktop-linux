@@ -57,13 +57,30 @@ To integrate with your desktop launcher, run with `--appimage-integrate`.
 sudo dpkg -i alpaka-desktop_*_amd64.deb
 ```
 
-### Arch Linux (AUR)
+### Arch Linux — pacman (local build)
+
+The fastest way on Arch is to build a native `.pkg.tar.zst` directly from the repo:
 
 ```bash
-yay -S alpaka-desktop-bin
+git clone https://github.com/nikoteressi/alpaka-desktop.git
+cd alpaka-desktop
+./packaging/build-pacman.sh          # produces packaging/out/alpaka-desktop-*.pkg.tar.zst
+sudo pacman -U packaging/out/alpaka-desktop-*.pkg.tar.zst
 ```
 
-> The AUR package installs the pre-built binary. To build from source instead, use the `alpaka-desktop` package (coming soon).
+> Requires: `base-devel`, `rust`, `nodejs`, `pnpm` — all available in the official repos or `pnpm` via npm.
+
+### Arch Linux — AUR (coming soon)
+
+An AUR package (`alpaka-desktop-bin`) is planned. The PKGBUILD is ready in
+[`packaging/aur/`](packaging/aur/) — contributions to publish it on AUR are welcome.
+Once live, installation will be:
+
+```bash
+yay -S alpaka-desktop-bin      # pre-built AppImage
+# or
+yay -S alpaka-desktop-git      # build from source
+```
 
 ---
 

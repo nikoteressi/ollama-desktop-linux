@@ -36,9 +36,7 @@ options=(!strip)
 _appimage="alpaka-desktop-${pkgver}.AppImage"
 
 source=("${_appimage}::https://github.com/nikoteressi/alpaka-desktop/releases/download/v${pkgver}/alpaka-desktop_${pkgver}_amd64.AppImage")
-# Replace SKIP with the actual sha256sum after the first release artifact is published:
-#   sha256sum alpaka-desktop_${pkgver}_amd64.AppImage
-sha256sums=('SKIP')
+sha256sums=('d7d99c94efd6e49d0f465ce81c44606ecac61f5c0bf5fbfe747094a47408bd4c')
 
 noextract=("${_appimage}")
 
