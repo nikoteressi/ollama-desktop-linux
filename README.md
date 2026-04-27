@@ -56,11 +56,12 @@ To integrate with your desktop launcher, run with `--appimage-integrate`.
 Add the repository once, then use `apt` like any other package:
 
 ```bash
-# Import signing key
-curl -fsSL https://nikoteressi.github.io/alpaka-desktop/apt/key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/alpaka-desktop.gpg
+# Import signing key (Ubuntu 22.04+ / gpg 2.4+)
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://nikoteressi.github.io/alpaka-desktop/apt/key.gpg | sudo tee /etc/apt/keyrings/alpaka-desktop.asc > /dev/null
 
 # Add repository (single line — copy the whole command)
-echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/alpaka-desktop.gpg] https://nikoteressi.github.io/alpaka-desktop/apt stable main" | sudo tee /etc/apt/sources.list.d/alpaka-desktop.list
+echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/alpaka-desktop.asc] https://nikoteressi.github.io/alpaka-desktop/apt stable main" | sudo tee /etc/apt/sources.list.d/alpaka-desktop.list
 
 # Install
 sudo apt update && sudo apt install alpaka-desktop
