@@ -365,7 +365,7 @@ jobs:
           done
 
           # Sign Release
-          GPG_OPTS="--batch --no-tty --pinentry-mode loopback"
+          GPG_OPTS="--batch --yes --no-tty --pinentry-mode loopback"
           # shellcheck disable=SC2086
           gpg $GPG_OPTS --default-key "$GPG_ID" \
             --clearsign -o "${APT_ROOT}/dists/stable/InRelease" "${RELEASE}"
