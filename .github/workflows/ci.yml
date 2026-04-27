@@ -28,12 +28,10 @@ jobs:
         run: cargo install cargo-audit --locked
 
       - name: Run cargo audit
-        # --deny vulnerability: fail on real CVEs
-        # --deny unsound: fail on unsound code
-        # --deny yanked: fail on yanked crates
-        # Unmaintained warnings (atk, gdk, gtk3 bindings via Tauri) are excluded
-        # intentionally — they are transitive Tauri deps we cannot update.
-        run: cargo audit --deny vulnerability --deny unsound --deny yanked
+        # No --deny flags: cargo audit exits non-zero by default for real CVEs.
+        # --deny warnings would also block on unmaintained notices from Tauri's
+        # GTK3 transitive deps (atk, gdk, etc.) which we cannot update.
+        run: cargo audit
         working-directory: src-tauri
 
       - name: Setup pnpm
