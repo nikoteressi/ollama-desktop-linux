@@ -190,8 +190,15 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
-          # Strip CR (CRLF → LF) — OpenSSH libcrypto rejects keys with Windows line endings
-          printf '%s\n' "$AUR_SSH_KEY" | tr -d '\r' > ~/.ssh/aur_id
+          # Strip CR, then detect format:
+          #   raw OpenSSH key → write directly
+          #   base64-encoded  → decode first (store as: base64 -w0 < ~/.ssh/aur_key)
+          CLEAN_KEY=$(printf '%s\n' "$AUR_SSH_KEY" | tr -d '\r')
+          if printf '%s' "$CLEAN_KEY" | grep -qE "^-+BEGIN"; then
+            printf '%s\n' "$CLEAN_KEY" > ~/.ssh/aur_id
+          else
+            printf '%s' "$CLEAN_KEY" | base64 --decode --ignore-garbage > ~/.ssh/aur_id
+          fi
           chmod 600 ~/.ssh/aur_id
           ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
 
@@ -274,7 +281,11 @@ jobs:
 
       - name: Download .deb from release
         if: steps.guard.outputs.run == 'true'
-        run: gh release download "${{ github.ref_name }}" --pattern "*.deb" -D /tmp/release/
+        # --repo required: no git checkout in this job, so gh can't auto-detect the repo
+        run: |
+          gh release download "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --pattern "*.deb" -D /tmp/release/
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
