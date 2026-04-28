@@ -1,12 +1,12 @@
 import { defineStore } from "pinia";
 import { invoke } from "@tauri-apps/api/core";
-import type { AuthState } from "../types/auth";
+import type { AuthState, ApiKeyStatus } from "../types/auth";
 
 export const useAuthStore = defineStore("auth", {
   state: (): AuthState => ({
     user: null,
     authenticatedHosts: {},
-    apiKeys: [],
+    apiKeyStatus: "unknown" as ApiKeyStatus,
     isCheckingStatus: false,
   }),
 
@@ -18,15 +18,11 @@ export const useAuthStore = defineStore("auth", {
           hostId,
         });
         this.authenticatedHosts[hostId] = isAuthenticated;
-
-        // Update user profile based on auth status
         if (isAuthenticated) {
-          // For now we use a dummy profile, but we could fetch more info here
           this.user = { id: hostId, username: "Local Device" };
         } else if (Object.values(this.authenticatedHosts).every((v) => !v)) {
           this.user = null;
         }
-
         return isAuthenticated;
       } catch (error) {
         console.error(`Failed to check auth status for host ${hostId}:`, error);
@@ -38,8 +34,7 @@ export const useAuthStore = defineStore("auth", {
 
     async checkOllamaSignedIn(): Promise<boolean> {
       try {
-        const isSignedIn = await invoke<boolean>("check_ollama_signed_in");
-        return isSignedIn;
+        return await invoke<boolean>("check_ollama_signed_in");
       } catch {
         return false;
       }
@@ -48,15 +43,9 @@ export const useAuthStore = defineStore("auth", {
     async login(hostId: string, token: string) {
       try {
         await invoke("login", { hostId, token });
-        // Since backend login currently returns void, we manually trigger a status check
         await this.checkAuthStatus(hostId);
-
-        // Mock user profile for now if authenticated, as backend doesn't return user yet
         if (this.authenticatedHosts[hostId]) {
-          this.user = {
-            id: "local-user",
-            username: "Ollama User",
-          };
+          this.user = { id: "local-user", username: "Ollama User" };
         }
       } catch (error) {
         console.error(`Login failed for host ${hostId}:`, error);
@@ -77,19 +66,35 @@ export const useAuthStore = defineStore("auth", {
       }
     },
 
-    // API Key management is currently placeholder until backend supports it
-    async fetchApiKeys() {
-      console.warn("fetchApiKeys is not yet implemented in backend");
+    async loadApiKeyStatus() {
+      try {
+        const status = await invoke<string>("get_api_key_status");
+        this.apiKeyStatus = status as ApiKeyStatus;
+      } catch {
+        this.apiKeyStatus = "unknown";
+      }
     },
 
-    async createApiKey(_name: string) {
-      console.warn("createApiKey is not yet implemented in backend");
-      throw new Error("Not implemented");
+    async saveApiKey(key: string) {
+      await invoke("set_api_key", { key });
+      this.apiKeyStatus = "set";
     },
 
-    async revokeApiKey(_id: string) {
-      console.warn("revokeApiKey is not yet implemented in backend");
-      throw new Error("Not implemented");
+    async removeApiKey() {
+      await invoke("delete_api_key");
+      this.apiKeyStatus = "not_set";
+    },
+
+    async validateApiKey(hostId: string): Promise<boolean> {
+      this.apiKeyStatus = "checking";
+      try {
+        const valid = await invoke<boolean>("validate_api_key", { hostId });
+        this.apiKeyStatus = valid ? "valid" : "invalid";
+        return valid;
+      } catch {
+        this.apiKeyStatus = "unknown";
+        return false;
+      }
     },
 
     isHostAuthenticated(hostId: string): boolean {
