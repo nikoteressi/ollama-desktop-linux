@@ -139,11 +139,12 @@ describe("ThinkBlock", () => {
     expect((wrapper.vm as unknown as { isOpen: boolean }).isOpen).toBe(true);
   });
 
-  it("toggle click is ignored while isThinking is true", async () => {
+  it("toggle click works while isThinking is true (collapsible during streaming)", async () => {
     const wrapper = mount(ThinkBlock, {
       props: { content: "", isThinking: true },
     });
-    await wrapper.find("button").trigger("click"); // should be a no-op
-    expect((wrapper.vm as unknown as { isOpen: boolean }).isOpen).toBe(true);
+    // Default: open. Click should collapse it — toggling during thinking is intentional (bug #7).
+    await wrapper.find("button").trigger("click");
+    expect((wrapper.vm as unknown as { isOpen: boolean }).isOpen).toBe(false);
   });
 });

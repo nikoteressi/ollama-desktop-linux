@@ -202,6 +202,8 @@ mod tests {
             if msg.contains("No secret-service")
                 || msg.contains("NoBackend")
                 || msg.contains("locked")
+                || msg.contains("Platform secure storage")
+                || msg.contains("ServiceUnknown")
             {
                 return; // Gracefully pass in headless environments without mocked DBus
             }
@@ -249,6 +251,8 @@ mod tests {
             if msg.contains("No secret-service")
                 || msg.contains("NoBackend")
                 || msg.contains("locked")
+                || msg.contains("Platform secure storage")
+                || msg.contains("ServiceUnknown")
             {
                 return; // No keyring in this environment — skip.
             }

@@ -123,7 +123,9 @@ mod tests {
             Err(AppError::Auth(msg))
                 if msg.contains("No secret-service")
                     || msg.contains("NoBackend")
-                    || msg.contains("locked") =>
+                    || msg.contains("locked")
+                    || msg.contains("Platform secure storage")
+                    || msg.contains("ServiceUnknown") =>
             {
                 ()
             }
@@ -142,7 +144,9 @@ mod tests {
             Err(AppError::Auth(msg))
                 if msg.contains("No secret-service")
                     || msg.contains("NoBackend")
-                    || msg.contains("locked") =>
+                    || msg.contains("locked")
+                    || msg.contains("Platform secure storage")
+                    || msg.contains("ServiceUnknown") =>
             {
                 ()
             }
