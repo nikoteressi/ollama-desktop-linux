@@ -32,7 +32,7 @@ pub fn get_token(host_id: &str) -> Result<Option<String>, AppError> {
         for service in &["ollama", "ollama-desktop"] {
             for account in &["cloud", "default"] {
                 if let Ok(token) = Entry::new(service, account).and_then(|e| e.get_password()) {
-                    log::info!("Found Ollama token for {}/{}", service, account);
+                    log::debug!("Found Ollama token for {}/{}", service, account);
                     return Ok(Some(token));
                 }
             }

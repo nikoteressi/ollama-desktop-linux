@@ -19,6 +19,8 @@ jobs:
   security-audit:
     name: Security Audit
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -68,6 +70,8 @@ jobs:
   build-check:
     name: Build Check
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -165,6 +169,8 @@ jobs:
     name: Test
     runs-on: ubuntu-22.04
     needs: build-check
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
