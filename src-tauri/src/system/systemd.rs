@@ -2,6 +2,53 @@ use crate::error::AppError;
 use std::process::{ExitStatus, Stdio};
 use tokio::process::Command;
 
+/// Returns the path to ~/.config/systemd/user/ollama.service.d
+fn override_dir() -> std::path::PathBuf {
+    let base = std::env::var("XDG_CONFIG_HOME")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| {
+            let home = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
+            std::path::PathBuf::from(home).join(".config")
+        });
+    base.join("systemd/user/ollama.service.d")
+}
+
+/// Creates (or overwrites) the OLLAMA_MODELS override.conf in `dir`.
+pub(crate) fn write_override_file(dir: &std::path::Path, models_path: &str) -> Result<(), AppError> {
+    std::fs::create_dir_all(dir)?;
+    let content = format!("[Service]\nEnvironment=OLLAMA_MODELS={}\n", models_path);
+    std::fs::write(dir.join("override.conf"), content)?;
+    Ok(())
+}
+
+/// Removes the override.conf from `dir`. No-ops if it doesn't exist.
+pub(crate) fn remove_override_file(dir: &std::path::Path) -> Result<(), AppError> {
+    let path = dir.join("override.conf");
+    match std::fs::remove_file(&path) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(AppError::Io(e.to_string())),
+    }
+}
+
+/// Writes the OLLAMA_MODELS systemd user service override and reloads the daemon.
+/// Returns Err if the file write or daemon-reload fails.
+pub async fn write_model_path_override(models_path: &str) -> Result<(), AppError> {
+    let dir = override_dir();
+    write_override_file(&dir, models_path)?;
+    let output = run_command("systemctl", &["--user", "daemon-reload"]).await?;
+    handle_result(output, "override file written but systemctl --user daemon-reload failed")
+}
+
+/// Removes the OLLAMA_MODELS override and does a best-effort daemon-reload.
+pub async fn remove_model_path_override() -> Result<(), AppError> {
+    let dir = override_dir();
+    remove_override_file(&dir)?;
+    // Best-effort: if daemon-reload fails (e.g. no user service), that's acceptable for a reset.
+    let _ = run_command("systemctl", &["--user", "daemon-reload"]).await;
+    Ok(())
+}
+
 fn systemctl_available() -> bool {
     std::process::Command::new("which")
         .arg("systemctl")
@@ -148,5 +195,51 @@ mod tests {
         } else {
             panic!("Expected Service error");
         }
+    }
+
+    #[test]
+    fn write_override_file_creates_dir_and_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("ollama.service.d");
+        write_override_file(&dir, "/mnt/ssd/models").unwrap();
+
+        let content = std::fs::read_to_string(dir.join("override.conf")).unwrap();
+        assert!(content.contains("[Service]"), "missing [Service] section");
+        assert!(
+            content.contains("Environment=OLLAMA_MODELS=/mnt/ssd/models"),
+            "missing OLLAMA_MODELS line"
+        );
+    }
+
+    #[test]
+    fn write_override_file_overwrites_existing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("ollama.service.d");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("override.conf"), "[Service]\nEnvironment=OLLAMA_MODELS=/old\n").unwrap();
+
+        write_override_file(&dir, "/mnt/new").unwrap();
+        let content = std::fs::read_to_string(dir.join("override.conf")).unwrap();
+        assert!(content.contains("OLLAMA_MODELS=/mnt/new"));
+        assert!(!content.contains("/old"));
+    }
+
+    #[test]
+    fn remove_override_file_deletes_existing_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("ollama.service.d");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("override.conf"), "[Service]\n").unwrap();
+
+        remove_override_file(&dir).unwrap();
+        assert!(!dir.join("override.conf").exists());
+    }
+
+    #[test]
+    fn remove_override_file_ok_when_missing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("nonexistent-service.d");
+        // Neither dir nor file exists — must return Ok
+        remove_override_file(&dir).unwrap();
     }
 }
