@@ -130,8 +130,9 @@ const statusLabel = computed(() => {
 const statusBadgeClass = computed(() => {
   switch (authStore.apiKeyStatus) {
     case "valid":
-    case "set":
       return "bg-green-500/10 text-green-500";
+    case "set":
+      return "bg-[var(--accent)]/10 text-[var(--accent)]";
     case "invalid":
       return "bg-[var(--danger)]/10 text-[var(--danger)]";
     case "checking":
@@ -155,8 +156,15 @@ async function handleSave() {
     keyInput.value = "";
     showKey.value = false;
     await handleValidate();
-  } catch {
-    errorMsg.value = "Failed to save key.";
+  } catch (err: unknown) {
+    let msg = "Failed to save key.";
+    if (typeof err === "object" && err !== null) {
+      const vals = Object.values(err);
+      if (vals.length > 0) msg = String(vals[0]);
+    } else if (typeof err === "string") {
+      msg = err;
+    }
+    errorMsg.value = msg;
   } finally {
     isSaving.value = false;
   }
@@ -164,7 +172,11 @@ async function handleSave() {
 
 async function handleValidate() {
   errorMsg.value = "";
-  const hostId = hostStore.activeHostId || "default";
+  const hostId = hostStore.activeHostId;
+  if (!hostId) {
+    errorMsg.value = "No active host selected. Cannot validate.";
+    return;
+  }
   try {
     await authStore.validateApiKey(hostId);
   } catch {
