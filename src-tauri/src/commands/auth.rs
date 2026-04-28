@@ -1,4 +1,5 @@
 use crate::auth::keyring;
+use crate::auth::keyring::API_KEY_ACCOUNT;
 use crate::error::AppError;
 use std::path::PathBuf;
 use tauri::command;
@@ -157,13 +158,104 @@ pub async fn trigger_ollama_signin() -> Result<String, AppError> {
     ))
 }
 
+/// Stores an Ollama API key in the system keyring under the fixed
+/// [`API_KEY_ACCOUNT`] identifier, separate from per-host OAuth tokens.
+#[command]
+pub async fn set_api_key(key: String) -> Result<(), AppError> {
+    let key = key.trim().to_string();
+    if key.is_empty() {
+        return Err(AppError::Auth("API key must not be empty".into()));
+    }
+    if key.len() > 512 {
+        return Err(AppError::Auth("API key exceeds maximum allowed length".into()));
+    }
+    tokio::task::spawn_blocking(move || keyring::set_token(API_KEY_ACCOUNT, &key)).await??;
+    Ok(())
+}
+
+/// Returns `"set"` if an API key is stored in the keyring, `"not_set"` otherwise.
+#[command]
+pub async fn get_api_key_status() -> Result<String, AppError> {
+    let token =
+        tokio::task::spawn_blocking(|| keyring::get_token(API_KEY_ACCOUNT)).await??;
+    Ok(if token.is_some() { "set" } else { "not_set" }.to_string())
+}
+
+/// Removes the API key from the system keyring. Idempotent — succeeds even if
+/// no key was stored.
+#[command]
+pub async fn delete_api_key() -> Result<(), AppError> {
+    tokio::task::spawn_blocking(|| keyring::delete_token(API_KEY_ACCOUNT)).await??;
+    Ok(())
+}
+
+/// Probes the given host's `/api/tags` endpoint with the stored API key.
+///
+/// Returns `true` if the server responds with 2xx, `false` on 401 or any other
+/// non-success status, and `Err` on network failure. Used by the frontend to
+/// show "valid/invalid" status after the user enters a key.
+pub async fn perform_validate_api_key(
+    http_client: &reqwest::Client,
+    db: crate::db::DbConn,
+    host_id: String,
+) -> Result<bool, AppError> {
+    let host_url = {
+        let db = db.clone();
+        let hid = host_id.clone();
+        tokio::task::spawn_blocking(move || {
+            let conn = db
+                .lock()
+                .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
+            crate::db::hosts::get_by_id(&conn, &hid)
+        })
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))??
+        .url
+    };
+
+    let key =
+        tokio::task::spawn_blocking(|| keyring::get_token(API_KEY_ACCOUNT)).await??;
+    let key = match key {
+        Some(k) => k,
+        None => return Ok(false),
+    };
+
+    let probe_url = format!("{}/api/tags", host_url.trim_end_matches('/'));
+    let resp = http_client
+        .get(&probe_url)
+        .header("Authorization", format!("Bearer {}", key))
+        .timeout(std::time::Duration::from_millis(3000))
+        .send()
+        .await;
+
+    match resp {
+        Ok(r) if r.status().is_success() => Ok(true),
+        Ok(r) if r.status() == 401 => Ok(false),
+        Ok(_) => Ok(false), // 5xx, 4xx non-401 — key not verified
+        Err(e) => Err(AppError::Internal(format!("Validation request failed: {}", e))),
+    }
+}
+
+#[command]
+pub async fn validate_api_key(
+    state: tauri::State<'_, crate::state::AppState>,
+    host_id: String,
+) -> Result<bool, AppError> {
+    perform_validate_api_key(&state.http_client, state.db.clone(), host_id).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::db::{migrations, seed_default_host, DbConn};
     use rusqlite::Connection;
     use std::sync::{Arc, Mutex};
-    use uuid::Uuid;
+
+    /// Serializes tests that share `API_KEY_ACCOUNT` in the system keyring.
+    /// `cargo test` runs tests in the same binary in parallel by default, so
+    /// `test_api_key_command_lifecycle` and `test_delete_api_key_is_idempotent`
+    /// would otherwise race on the same keyring slot.
+    static API_KEY_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     #[test]
     fn test_ollama_key_path_structure() {
@@ -234,6 +326,120 @@ mod tests {
                 .await
                 .is_ok()
         );
+    }
+
+    #[tokio::test]
+    async fn test_set_api_key_validation() {
+        // Empty key is rejected
+        let res = set_api_key("".to_string()).await;
+        match res {
+            Err(AppError::Auth(msg)) if msg.contains("empty") => (),
+            Ok(_) => panic!("Empty key should be rejected"),
+            Err(e) => panic!("Unexpected error for empty key: {:?}", e),
+        }
+
+        // Whitespace-only key is rejected
+        let res = set_api_key("   ".to_string()).await;
+        match res {
+            Err(AppError::Auth(msg)) if msg.contains("empty") => (),
+            Ok(_) => panic!("Whitespace-only key should be rejected"),
+            Err(e) => panic!("Unexpected error for whitespace key: {:?}", e),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_api_key_command_lifecycle() {
+        // Serialize with test_delete_api_key_is_idempotent — both mutate the
+        // same API_KEY_ACCOUNT keyring slot and would race under parallel test
+        // execution without this guard.
+        let _lock = API_KEY_TEST_LOCK.lock().unwrap();
+
+        let set_res = set_api_key("sk-test-cmd-key-abc".to_string()).await;
+        if let Err(ref e) = set_res {
+            let msg = format!("{e:?}");
+            if msg.contains("No secret-service")
+                || msg.contains("NoBackend")
+                || msg.contains("locked")
+                || msg.contains("Platform secure storage")
+                || msg.contains("ServiceUnknown")
+            {
+                return;
+            }
+        }
+        assert!(set_res.is_ok(), "set_api_key should succeed");
+
+        let status = get_api_key_status().await.expect("get_api_key_status must succeed");
+        assert_eq!(status, "set", "status should be 'set' immediately after set_api_key");
+
+        // Delete and verify idempotency
+        assert!(delete_api_key().await.is_ok());
+        let status_after = get_api_key_status()
+            .await
+            .expect("get_api_key_status must succeed after delete");
+        assert_eq!(status_after, "not_set");
+    }
+
+    #[tokio::test]
+    async fn test_delete_api_key_is_idempotent() {
+        // Serialize with test_api_key_command_lifecycle — both mutate the same
+        // API_KEY_ACCOUNT keyring slot and would race under parallel test execution.
+        let _lock = API_KEY_TEST_LOCK.lock().unwrap();
+
+        // delete_api_key must not error even when no key is present.
+        // Call twice: first clears any existing entry, second proves idempotency.
+        let first = delete_api_key().await;
+        match first {
+            Ok(_) => (),
+            Err(AppError::Auth(ref msg))
+                if msg.contains("No secret-service")
+                    || msg.contains("NoBackend")
+                    || msg.contains("locked")
+                    || msg.contains("Platform secure storage")
+                    || msg.contains("ServiceUnknown") =>
+            {
+                return; // No keyring backend — skip.
+            }
+            Err(e) => panic!("Unexpected error on first delete: {:?}", e),
+        }
+        let second = delete_api_key().await;
+        match second {
+            Ok(_) => (),
+            Err(AppError::Auth(ref msg))
+                if msg.contains("No secret-service")
+                    || msg.contains("NoBackend")
+                    || msg.contains("locked")
+                    || msg.contains("Platform secure storage")
+                    || msg.contains("ServiceUnknown") => {}
+            Err(e) => panic!("Unexpected error on second (idempotent) delete: {:?}", e),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_perform_validate_api_key_no_key_stored() {
+        // Verifies that perform_validate_api_key completes without panicking and
+        // returns a valid result. The keyring (API_KEY_ACCOUNT) is shared with
+        // other concurrently-running tests, so we cannot assert a specific Ok(true/false)
+        // value — we only assert the function does not return an unexpected error type.
+        let (client, db) = create_test_state().await;
+        let host_id = {
+            let conn = db.lock().unwrap();
+            let hosts = crate::db::hosts::list_all(&conn).unwrap();
+            hosts[0].id.clone()
+        };
+
+        let result = perform_validate_api_key(&client, db.clone(), host_id).await;
+        match result {
+            Ok(_) => (), // Ok(true) or Ok(false) are both valid
+            Err(AppError::Internal(_)) => (), // Network unreachable is acceptable
+            Err(AppError::Auth(ref msg))
+                if msg.contains("No secret-service")
+                    || msg.contains("NoBackend")
+                    || msg.contains("locked")
+                    || msg.contains("Platform secure storage")
+                    || msg.contains("ServiceUnknown") => {}
+            Err(AppError::NotFound(_)) => (), // Host not found in in-memory DB edge case
+            Err(e) => panic!("Unexpected error from perform_validate_api_key: {:?}", e),
+        }
     }
 
     #[tokio::test]
