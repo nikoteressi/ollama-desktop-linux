@@ -9,6 +9,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- Security: Downgrade keyring token-found log from `INFO` to `DEBUG` to prevent cleartext-logging CodeQL alert near credential retrieval (#56)
+- CI: Add explicit `permissions: contents: read` to `security-audit`, `build-check`, and `test` jobs to satisfy CodeQL `missing-workflow-permissions` rule (#56)
+
 ### Added
 - CI: Dependabot config grouping all `@tauri-apps/*` NPM and `tauri*` Rust crate updates into a single PR to prevent version mismatch build failures (#14)
 - CI: Add `test` job to CI pipeline — `cargo test --workspace` and `pnpm test --run` (Vitest) now gate every PR (#37)
