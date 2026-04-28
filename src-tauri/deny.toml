@@ -8,10 +8,34 @@ targets = [
 
 [advisories]
 version = 2
-# Deny actual CVEs. Unmaintained crates (e.g. Tauri's GTK3 transitive deps)
-# are excluded from hard-failure because they cannot be updated until Tauri
-# migrates to GTK4 — cargo-deny defaults to warning on unmaintained.
-ignore = []
+# Unmaintained advisories below are all transitive dependencies that cannot
+# be updated: GTK3 crates are locked by Tauri v2's Linux GTK3 requirement
+# until Tauri migrates to GTK4; the unic-* and proc-macro-error crates are
+# pulled in by other upstream deps with no available replacement.
+ignore = [
+    # gtk-rs GTK3 bindings — no longer maintained (RUSTSEC-2024-0411..0420)
+    # Blocked by Tauri v2; will resolve when Tauri migrates to GTK4.
+    { id = "RUSTSEC-2024-0411" },
+    { id = "RUSTSEC-2024-0412" },
+    { id = "RUSTSEC-2024-0413" },
+    { id = "RUSTSEC-2024-0414" },
+    { id = "RUSTSEC-2024-0415" },
+    { id = "RUSTSEC-2024-0416" },
+    { id = "RUSTSEC-2024-0417" },
+    { id = "RUSTSEC-2024-0418" },
+    { id = "RUSTSEC-2024-0419" },
+    { id = "RUSTSEC-2024-0420" },
+    # proc-macro-error — unmaintained, pulled in by tray-icon via upstream deps
+    { id = "RUSTSEC-2024-0370" },
+    # fxhash — unmaintained, transitive dep
+    { id = "RUSTSEC-2025-0057" },
+    # unic-* Unicode crates — unmaintained (open-i18n/rust-unic)
+    { id = "RUSTSEC-2025-0075" },
+    { id = "RUSTSEC-2025-0080" },
+    { id = "RUSTSEC-2025-0081" },
+    { id = "RUSTSEC-2025-0098" },
+    { id = "RUSTSEC-2025-0100" },
+]
 
 [licenses]
 version = 2
@@ -28,6 +52,8 @@ allow = [
     "CC0-1.0",
     "MPL-2.0",
     "OpenSSL",
+    # webpki-roots v1.0.7 — permissive data license for TLS root certificates
+    "CDLA-Permissive-2.0",
 ]
 unused-allowed-license = "allow"
 
