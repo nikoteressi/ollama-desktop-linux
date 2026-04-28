@@ -84,7 +84,9 @@ describe("useSendMessage", () => {
     vi.mocked(invoke).mockRejectedValue(new Error("Network error"));
 
     const { sendMessage } = useSendMessage();
-    await expect(sendMessage("hello")).rejects.toThrow("Failed to send message");
+    await expect(sendMessage("hello")).rejects.toThrow(
+      "Failed to send message",
+    );
 
     expect(store.messages["conv-1"]).toHaveLength(0);
     expect(store.streaming.isStreaming).toBe(false);
@@ -95,7 +97,9 @@ describe("useSendMessage", () => {
     store.activeConversationId = null;
 
     const { sendMessage } = useSendMessage();
-    await expect(sendMessage("hello")).rejects.toThrow("No active conversation");
+    await expect(sendMessage("hello")).rejects.toThrow(
+      "No active conversation",
+    );
   });
 
   it("persists draft conversation before sending", async () => {
@@ -124,7 +128,10 @@ describe("useSendMessage", () => {
     const { sendMessage } = useSendMessage();
     await sendMessage("My first message");
 
-    expect(mocks.updateTitle).toHaveBeenCalledWith("conv-1", "My first message");
+    expect(mocks.updateTitle).toHaveBeenCalledWith(
+      "conv-1",
+      "My first message",
+    );
   });
 
   it("does not auto-rename when title is not 'new chat'", async () => {
