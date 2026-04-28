@@ -8,10 +8,9 @@ targets = [
 
 [advisories]
 version = 2
-# Deny actual CVEs. "unmaintained" is warn-only because Tauri's GTK3
-# transitive dependencies (atk, gdk-sys, etc.) are unmaintained upstream
-# and cannot be updated until Tauri migrates to GTK4.
-unmaintained = "warn"
+# Deny actual CVEs. Unmaintained crates (e.g. Tauri's GTK3 transitive deps)
+# are excluded from hard-failure because they cannot be updated until Tauri
+# migrates to GTK4 — cargo-deny defaults to warning on unmaintained.
 ignore = []
 
 [licenses]
