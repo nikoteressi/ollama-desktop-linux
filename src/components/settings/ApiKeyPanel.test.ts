@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mount } from "@vue/test-utils";
+import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { nextTick } from "vue";
 
@@ -88,13 +88,14 @@ describe("ApiKeyPanel — save action", () => {
     await input.setValue("sk-test-key-abc");
 
     mockInvoke.mockResolvedValueOnce(undefined); // set_api_key
+    mockInvoke.mockResolvedValueOnce([]); // list_hosts (fetchHosts after key save)
     mockInvoke.mockResolvedValueOnce(true); // validate_api_key
 
     const saveBtn = wrapper
       .findAll("button")
       .find((b) => b.text().includes("Save"));
     await saveBtn!.trigger("click");
-    await tick();
+    await flushPromises();
 
     expect(mockInvoke).toHaveBeenCalledWith("set_api_key", {
       key: "sk-test-key-abc",
@@ -110,14 +111,15 @@ describe("ApiKeyPanel — save action", () => {
     const input = wrapper.find("input");
     await input.setValue("sk-test-key-abc");
 
-    mockInvoke.mockResolvedValueOnce(undefined);
-    mockInvoke.mockResolvedValueOnce(true);
+    mockInvoke.mockResolvedValueOnce(undefined); // set_api_key
+    mockInvoke.mockResolvedValueOnce([]); // list_hosts (fetchHosts after key save)
+    mockInvoke.mockResolvedValueOnce(true); // validate_api_key
 
     const saveBtn = wrapper
       .findAll("button")
       .find((b) => b.text().includes("Save"));
     await saveBtn!.trigger("click");
-    await tick();
+    await flushPromises();
 
     expect((input.element as HTMLInputElement).value).toBe("");
   });
@@ -263,13 +265,14 @@ describe("ApiKeyPanel — remove action", () => {
     await removeBtn!.trigger("click");
     await tick();
 
-    mockInvoke.mockResolvedValueOnce(undefined);
+    mockInvoke.mockResolvedValueOnce(undefined); // delete_api_key
+    mockInvoke.mockResolvedValueOnce([]); // list_hosts (fetchHosts after remove)
 
     const confirmBtn = wrapper
       .findAll("button")
       .find((b) => b.text() === "Yes, remove");
     await confirmBtn!.trigger("click");
-    await tick();
+    await flushPromises();
 
     expect(mockInvoke).toHaveBeenCalledWith("delete_api_key", undefined);
   });

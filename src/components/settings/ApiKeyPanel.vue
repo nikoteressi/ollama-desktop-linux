@@ -189,6 +189,7 @@ async function handleSave() {
   errorMsg.value = "";
   try {
     await authStore.saveApiKey(trimmed);
+    await hostStore.fetchHosts();
     keyInput.value = "";
     showKey.value = false;
     await handleValidate();
@@ -225,6 +226,7 @@ async function confirmRemove() {
   errorMsg.value = "";
   try {
     await authStore.removeApiKey();
+    await hostStore.fetchHosts();
     keyInput.value = "";
   } catch {
     errorMsg.value = "Failed to remove key.";
