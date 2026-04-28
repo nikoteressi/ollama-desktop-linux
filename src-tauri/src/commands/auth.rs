@@ -167,7 +167,9 @@ pub async fn set_api_key(key: String) -> Result<(), AppError> {
         return Err(AppError::Auth("API key must not be empty".into()));
     }
     if key.len() > 512 {
-        return Err(AppError::Auth("API key exceeds maximum allowed length".into()));
+        return Err(AppError::Auth(
+            "API key exceeds maximum allowed length".into(),
+        ));
     }
     tokio::task::spawn_blocking(move || keyring::set_token(API_KEY_ACCOUNT, &key)).await??;
     Ok(())
@@ -176,8 +178,7 @@ pub async fn set_api_key(key: String) -> Result<(), AppError> {
 /// Returns `"set"` if an API key is stored in the keyring, `"not_set"` otherwise.
 #[command]
 pub async fn get_api_key_status() -> Result<String, AppError> {
-    let token =
-        tokio::task::spawn_blocking(|| keyring::get_token(API_KEY_ACCOUNT)).await??;
+    let token = tokio::task::spawn_blocking(|| keyring::get_token(API_KEY_ACCOUNT)).await??;
     Ok(if token.is_some() { "set" } else { "not_set" }.to_string())
 }
 
@@ -213,8 +214,7 @@ pub async fn perform_validate_api_key(
         .url
     };
 
-    let key =
-        tokio::task::spawn_blocking(|| keyring::get_token(API_KEY_ACCOUNT)).await??;
+    let key = tokio::task::spawn_blocking(|| keyring::get_token(API_KEY_ACCOUNT)).await??;
     let key = match key {
         Some(k) => k,
         None => return Ok(false),
@@ -232,7 +232,10 @@ pub async fn perform_validate_api_key(
         Ok(r) if r.status().is_success() => Ok(true),
         Ok(r) if r.status() == 401 => Ok(false),
         Ok(_) => Ok(false), // 5xx, 4xx non-401 — key not verified
-        Err(e) => Err(AppError::Internal(format!("Validation request failed: {}", e))),
+        Err(e) => Err(AppError::Internal(format!(
+            "Validation request failed: {}",
+            e
+        ))),
     }
 }
 
@@ -368,8 +371,13 @@ mod tests {
         }
         assert!(set_res.is_ok(), "set_api_key should succeed");
 
-        let status = get_api_key_status().await.expect("get_api_key_status must succeed");
-        assert_eq!(status, "set", "status should be 'set' immediately after set_api_key");
+        let status = get_api_key_status()
+            .await
+            .expect("get_api_key_status must succeed");
+        assert_eq!(
+            status, "set",
+            "status should be 'set' immediately after set_api_key"
+        );
 
         // Delete and verify idempotency
         assert!(delete_api_key().await.is_ok());
@@ -429,7 +437,7 @@ mod tests {
 
         let result = perform_validate_api_key(&client, db.clone(), host_id).await;
         match result {
-            Ok(_) => (), // Ok(true) or Ok(false) are both valid
+            Ok(_) => (),                      // Ok(true) or Ok(false) are both valid
             Err(AppError::Internal(_)) => (), // Network unreachable is acceptable
             Err(AppError::Auth(ref msg))
                 if msg.contains("No secret-service")
