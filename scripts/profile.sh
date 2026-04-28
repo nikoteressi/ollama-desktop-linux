@@ -3,7 +3,7 @@
 # Measures against budgets documented in docs/ARCHITECTURE.md §13
 #
 # Usage:
-#   ./scripts/profile.sh [--no-launch]  # --no-launch: attach to running process
+#   ./scripts/profile.sh [--no-launch]  # --no-launch: static checks only (binary size, bundle — no display needed)
 
 set -euo pipefail
 
@@ -16,7 +16,7 @@ SAMPLE_DURATION=10   # seconds to sample CPU/memory after launch
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 
 pass() { echo -e "  ${GREEN}PASS${NC}  $1"; }
-fail() { echo -e "  ${RED}FAIL${NC}  $1"; }
+fail() { echo -e "  ${RED}FAIL${NC}  $1"; BUDGET_FAILED=1; }
 warn() { echo -e "  ${YELLOW}WARN${NC}  $1"; }
 
 # float comparison: lt_float A B → exit 0 if A < B
@@ -29,6 +29,8 @@ echo "════════════════════════�
 echo "  Alpaka Desktop — Resource Profile"
 echo "══════════════════════════════════════════"
 echo ""
+
+BUDGET_FAILED=0
 
 echo "── 1. Binary & bundle sizes ──────────────"
 
@@ -69,7 +71,7 @@ echo "── 2. Cold start time ────────────────
 
 if [[ "${1:-}" == "--no-launch" ]]; then
   echo "  Skipping launch (--no-launch mode)"
-  exit 0
+  exit "$BUDGET_FAILED"
 fi
 
 START_TS=$(date +%s%3N)
