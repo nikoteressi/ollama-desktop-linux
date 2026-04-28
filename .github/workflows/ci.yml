@@ -131,6 +131,34 @@ jobs:
       - name: Prettier check
         run: pnpm format:check
 
+      - name: Check CHANGELOG updated
+        if: github.event_name == 'pull_request'
+        env:
+          PR_LABELS: ${{ toJson(github.event.pull_request.labels) }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+
+          git fetch origin "${BASE_REF}" --depth=1
+          CHANGED=$(git diff --name-only "origin/${BASE_REF}...HEAD")
+
+          if echo "$CHANGED" | grep -q "^CHANGELOG.md$"; then
+            echo "CHANGELOG.md updated."
+            exit 0
+          fi
+
+          ADVISORY=$(echo "$PR_LABELS" | jq -r '.[].name' | grep -E '^type: (ci|docs)$' | head -1 || true)
+
+          if [[ -n "$ADVISORY" ]]; then
+            echo "WARNING: CHANGELOG.md not updated, but PR is labeled '${ADVISORY}' — advisory only."
+            exit 0
+          fi
+
+          echo "ERROR: CHANGELOG.md not updated."
+          echo "Please add an entry under [Unreleased] in CHANGELOG.md."
+          echo "For CI-only or docs-only PRs, add the 'type: ci' or 'type: docs' label to suppress this check."
+          exit 1
+
   test:
     name: Test
     runs-on: ubuntu-22.04
