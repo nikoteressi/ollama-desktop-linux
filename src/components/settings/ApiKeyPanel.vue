@@ -189,6 +189,7 @@ async function handleSave() {
   errorMsg.value = "";
   try {
     await authStore.saveApiKey(trimmed);
+    await hostStore.fetchHosts();
     keyInput.value = "";
     showKey.value = false;
     await handleValidate();

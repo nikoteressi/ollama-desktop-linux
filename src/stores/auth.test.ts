@@ -76,7 +76,7 @@ describe("API key management", () => {
   });
 
   it("saveApiKey calls set_api_key and sets status to set", async () => {
-    mockInvoke.mockResolvedValueOnce(undefined);
+    mockInvoke.mockResolvedValueOnce(undefined); // set_api_key
     const store = useAuthStore();
     await store.saveApiKey("sk-test-key-abc");
     expect(mockInvoke).toHaveBeenCalledWith("set_api_key", {
