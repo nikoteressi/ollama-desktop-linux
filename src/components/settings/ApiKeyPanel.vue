@@ -226,6 +226,7 @@ async function confirmRemove() {
   errorMsg.value = "";
   try {
     await authStore.removeApiKey();
+    await hostStore.fetchHosts();
     keyInput.value = "";
   } catch {
     errorMsg.value = "Failed to remove key.";

@@ -265,13 +265,14 @@ describe("ApiKeyPanel — remove action", () => {
     await removeBtn!.trigger("click");
     await tick();
 
-    mockInvoke.mockResolvedValueOnce(undefined);
+    mockInvoke.mockResolvedValueOnce(undefined); // delete_api_key
+    mockInvoke.mockResolvedValueOnce([]); // list_hosts (fetchHosts after remove)
 
     const confirmBtn = wrapper
       .findAll("button")
       .find((b) => b.text() === "Yes, remove");
     await confirmBtn!.trigger("click");
-    await tick();
+    await flushPromises();
 
     expect(mockInvoke).toHaveBeenCalledWith("delete_api_key", undefined);
   });
