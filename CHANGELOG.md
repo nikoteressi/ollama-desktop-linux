@@ -18,6 +18,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CI: Add `github-actions` ecosystem to Dependabot for automated action version updates (#45)
 - CI: Add concurrency cancellation blocks to `ci.yml` and `claude-code-review.yml` (#46)
 - CI: Extend CI push triggers to cover `release/*` and `hotfix/*` branches (#47)
+- CI: Gate releases on CI passing — `ci-gate` pre-flight job verifies Build Check, Test, and Security Audit before any publish step runs (#38)
+- CI: Enforce binary size budget (15 MB) in release pipeline via `scripts/profile.sh --no-launch`; fixed `profile.sh` to actually exit non-zero on budget failure (#50)
+- CI: Enforce CHANGELOG update on PRs — advisory for `type: ci` and `type: docs` labels (#51)
+- CI: Collect code coverage with Vitest (v8) and cargo-llvm-cov; upload to SonarCloud and as GitHub Actions artifacts (#53)
 
 ### Changed
 - CI: Pin all GitHub Actions in `ci.yml`, `claude-code-review.yml`, `claude.yml` to full commit SHAs to eliminate supply chain risk (#39)
