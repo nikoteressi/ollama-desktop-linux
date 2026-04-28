@@ -11,6 +11,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 - Security: Downgrade keyring token-found log from `INFO` to `DEBUG` to prevent cleartext-logging CodeQL alert near credential retrieval (#56)
+
+### Internal
+- Repo: Remove `alpaka-desktop-mockup/` design artefacts and `docs/superpowers/` AI-tool docs from the repository; untrack `.vscode/extensions.json`, `playwright-report/`, and `test-results/` output; extend `.gitignore` to cover `.playwright-mcp/`, `.superpowers/`, `.worktrees/` (#57)
 - CI: Add explicit `permissions: contents: read` to `security-audit`, `build-check`, and `test` jobs to satisfy CodeQL `missing-workflow-permissions` rule (#56)
 
 ### Added
