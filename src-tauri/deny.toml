@@ -28,10 +28,6 @@ allow = [
     "MPL-2.0",
     "OpenSSL",
 ]
-# Copyleft licenses trigger a warning, not a build failure.
-# Tauri's GTK/WebKit system library linking does not constitute
-# distribution of those libraries under the LGPL.
-copyleft = "warn"
 unused-allowed-license = "allow"
 
 [[licenses.clarify]]

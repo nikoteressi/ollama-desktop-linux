@@ -4,7 +4,7 @@ version = "1.1.1"
 description = "Native desktop client for Ollama"
 authors = ["nikoteressi@gmail.com"]
 edition = "2021"
-rust-version = "1.85.0"   # edition2024 stabilised in 1.85 (transitive deps); CVE-2024-24576 minimum was 1.77.2
+rust-version = "1.88.0"   # darling/image/serde_with/time require 1.88; CVE-2024-24576 minimum was 1.77.2
 
 [lib]
 name = "alpaka_desktop_lib"
