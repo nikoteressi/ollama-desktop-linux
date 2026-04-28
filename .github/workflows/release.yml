@@ -25,7 +25,7 @@ jobs:
           REQUIRED=("Build Check" "Test" "Security Audit")
 
           echo "Checking CI status for commit ${SHA} in ${REPO}..."
-          RESULT=$(gh api "repos/${REPO}/commits/${SHA}/check-runs" --paginate)
+          RESULT=$(gh api "repos/${REPO}/commits/${SHA}/check-runs?filter=latest&per_page=100")
 
           ALL_PASS=true
           for CHECK in "${REQUIRED[@]}"; do
