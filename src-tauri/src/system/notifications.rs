@@ -67,16 +67,31 @@ pub fn send_notification<R: Runtime>(
         .show();
 }
 
-pub fn notify_model_created<R: Runtime>(app: &AppHandle<R>, _name: &str) {
-    let _ = app; // stub — implemented in Task 6
+pub fn notify_model_created<R: Runtime>(app: &AppHandle<R>, name: &str) {
+    send_notification(
+        app,
+        "Model Created",
+        &format!("Model '{}' is ready to use.", name),
+        None,
+    );
 }
 
-pub fn notify_model_create_failed<R: Runtime>(app: &AppHandle<R>, _name: &str, _error: &str) {
-    let _ = app; // stub — implemented in Task 6
+pub fn notify_model_create_failed<R: Runtime>(app: &AppHandle<R>, name: &str, error: &str) {
+    send_notification(
+        app,
+        "Model Creation Failed",
+        &format!("Failed to create '{}': {}", name, error),
+        None,
+    );
 }
 
-pub fn notify_model_create_cancelled<R: Runtime>(app: &AppHandle<R>, _name: &str) {
-    let _ = app; // stub — implemented in Task 6
+pub fn notify_model_create_cancelled<R: Runtime>(app: &AppHandle<R>, name: &str) {
+    send_notification(
+        app,
+        "Model Creation Cancelled",
+        &format!("Creation of '{}' was cancelled.", name),
+        None,
+    );
 }
 
 pub fn notify_model_pulled<R: Runtime>(app: &AppHandle<R>, name: &str) {
