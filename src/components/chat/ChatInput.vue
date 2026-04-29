@@ -164,8 +164,11 @@ async function selectModel(model: string) {
     }
   }
 
-  const defaults = await applyModelDefaults(model);
-  chatOptions.value = defaults;
+  try {
+    chatOptions.value = await applyModelDefaults(model);
+  } catch {
+    // ignore — chatOptions stays as-is on IPC failure
+  }
   presetId.value = "";
 }
 

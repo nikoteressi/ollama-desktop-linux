@@ -445,6 +445,7 @@ describe("ChatInput — Model defaults on selection", () => {
     const wrapper = mountInput();
     const vm = wrapper.vm as unknown as {
       selectModel: (model: string) => Promise<void>;
+      chatOptions: { temperature?: number };
     };
 
     await vm.selectModel("qwen2.5-coder:14b");
@@ -452,6 +453,7 @@ describe("ChatInput — Model defaults on selection", () => {
     expect(mockInvoke).toHaveBeenCalledWith("get_model_defaults", {
       modelName: "qwen2.5-coder:14b",
     });
+    expect(vm.chatOptions.temperature).toBe(0.1);
   });
 
   it("GIVEN no model defaults stored — selectModel does not throw", async () => {
@@ -476,9 +478,11 @@ describe("ChatInput — Model defaults on selection", () => {
     const wrapper = mountInput();
     const vm = wrapper.vm as unknown as {
       selectModel: (model: string) => Promise<void>;
+      chatOptions: Record<string, unknown>;
     };
 
     await expect(vm.selectModel("llama3")).resolves.not.toThrow();
+    expect(vm.chatOptions).toEqual({});
   });
 });
 
