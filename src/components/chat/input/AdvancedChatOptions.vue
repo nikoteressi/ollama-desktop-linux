@@ -104,12 +104,24 @@
       <div v-if="props.model" class="flex justify-end">
         <button
           @click="handleSaveAsModelDefault"
-          class="text-[10px] text-[var(--text-dim)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+          :disabled="savingDefault"
+          class="text-[10px] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          :class="
+            saveDefaultError
+              ? 'text-red-400'
+              : savedAsDefault
+                ? 'text-[var(--accent)] font-semibold'
+                : 'text-[var(--text-dim)] hover:text-[var(--accent)]'
+          "
         >
           {{
-            savedAsDefault
-              ? "Saved as model default ✓"
-              : "Save as model default"
+            savingDefault
+              ? "Saving…"
+              : saveDefaultError
+                ? "Failed to save ✕"
+                : savedAsDefault
+                  ? "Saved as model default ✓"
+                  : "Save as model default"
           }}
         </button>
       </div>
@@ -203,7 +215,8 @@ const saving = ref(false);
 const saveName = ref("");
 const saveInput = ref<HTMLInputElement | null>(null);
 const savedAsDefault = ref(false);
-
+const savingDefault = ref(false);
+const saveDefaultError = ref(false);
 
 const isPresetOpen = ref(false);
 const presetDropdownRef = ref<HTMLElement | null>(null);
@@ -274,7 +287,7 @@ async function commitSave() {
 }
 
 async function handleSaveAsModelDefault() {
-  if (!props.model) return;
+  if (!props.model || savingDefault.value) return;
   const effective: Partial<ChatOptions> = {
     temperature:
       props.modelValue.temperature ?? settingsStore.chatOptions.temperature,
@@ -287,14 +300,23 @@ async function handleSaveAsModelDefault() {
     repeat_last_n:
       props.modelValue.repeat_last_n ?? settingsStore.chatOptions.repeat_last_n,
   };
+  savingDefault.value = true;
+  saveDefaultError.value = false;
+  savedAsDefault.value = false;
   try {
     await saveAsModelDefault(props.model, effective);
     savedAsDefault.value = true;
     setTimeout(() => {
       savedAsDefault.value = false;
-    }, 1500);
-  } catch {
-    // ignore IPC failures silently
+    }, 2000);
+  } catch (e) {
+    console.error("[AdvancedChatOptions] set_model_defaults failed:", e);
+    saveDefaultError.value = true;
+    setTimeout(() => {
+      saveDefaultError.value = false;
+    }, 3000);
+  } finally {
+    savingDefault.value = false;
   }
 }
 </script>
