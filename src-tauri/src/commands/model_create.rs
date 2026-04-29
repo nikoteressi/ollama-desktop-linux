@@ -1,14 +1,8 @@
+use crate::commands::models::ModelInfo;
 use crate::error::AppError;
 use crate::ollama::client::OllamaClient;
 use crate::state::AppState;
-use serde::Deserialize;
 use tauri::State;
-
-#[derive(Debug, Deserialize)]
-struct ShowResponse {
-    #[serde(default)]
-    modelfile: Option<String>,
-}
 
 pub async fn core_get_modelfile(client: &OllamaClient, name: &str) -> Result<String, AppError> {
     let resp = client
@@ -25,7 +19,7 @@ pub async fn core_get_modelfile(client: &OllamaClient, name: &str) -> Result<Str
         )));
     }
 
-    let info: ShowResponse = resp.json().await?;
+    let info: ModelInfo = resp.json().await?;
     Ok(info.modelfile.unwrap_or_default())
 }
 
