@@ -151,6 +151,53 @@ async fn detect_service_type() -> ServiceType {
     ServiceType::None
 }
 
+// ── Service application ────────────────────────────────────────────────────────
+
+async fn apply_user_service(resolved_path: &str) -> Result<ApplyModelPathResult, AppError> {
+    let home = std::env::var("HOME")
+        .map_err(|_| AppError::Internal("HOME env var not set".into()))?;
+
+    let override_dir = PathBuf::from(&home)
+        .join(".config/systemd/user/ollama.service.d");
+    std::fs::create_dir_all(&override_dir)?;
+    std::fs::write(override_dir.join("override.conf"), override_file_content(resolved_path))?;
+
+    let reload_ok = Command::new("systemctl")
+        .args(["--user", "daemon-reload"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .await
+        .map(|s| s.success())
+        .unwrap_or(false);
+
+    if !reload_ok {
+        return Err(AppError::Service(
+            "systemctl --user daemon-reload failed".into(),
+        ));
+    }
+
+    let restarted = Command::new("systemctl")
+        .args(["--user", "restart", "ollama"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .await
+        .map(|s| s.success())
+        .unwrap_or(false);
+
+    Ok(ApplyModelPathResult {
+        service_type: "user".into(),
+        applied: true,
+        restarted,
+        message: if restarted {
+            "Ollama restarted with new model path".into()
+        } else {
+            "Model path configured. Start Ollama to apply.".into()
+        },
+    })
+}
+
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -286,5 +333,22 @@ mod tests {
         let result = validate_model_path("~".into()).await.unwrap();
         assert!(result.exists);
         assert!(!result.resolved_path.contains('~'));
+    }
+
+    // ── apply_user_service ────────────────────────────────────────────────────
+
+    #[test]
+    fn user_override_file_content_is_correct() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let override_dir = dir.path().join("ollama.service.d");
+        std::fs::create_dir_all(&override_dir).unwrap();
+        let override_path = override_dir.join("override.conf");
+        std::fs::write(&override_path, override_file_content("/mnt/models")).unwrap();
+
+        let written = std::fs::read_to_string(&override_path).unwrap();
+        assert_eq!(
+            written,
+            "[Service]\nEnvironment=\"OLLAMA_MODELS=/mnt/models\"\n"
+        );
     }
 }
