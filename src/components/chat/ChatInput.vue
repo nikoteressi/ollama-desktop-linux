@@ -214,6 +214,10 @@ watch(
   async (name) => {
     if (name && name !== "Select model") {
       await modelStore.fetchCapabilities(name);
+      // Model defaults are applied to chatOptions in memory and persisted
+      // via the draft mechanism (useDraftManager saves chatOptions on each
+      // change). For non-draft conversations, defaults are not written back
+      // to settings_json in the DB — a page refresh will lose them.
       if (chatStore.isDraft) {
         try {
           chatOptions.value = await applyModelDefaults(name);

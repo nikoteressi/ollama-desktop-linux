@@ -161,9 +161,10 @@
           <button
             data-testid="save-defaults"
             @click="saveDefaults"
-            class="px-4 py-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
+            class="px-4 py-1.5 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
+            :class="saveError ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white'"
           >
-            {{ saved ? "Saved ✓" : "Save" }}
+            {{ saveError ? "Failed ✕" : saved ? "Saved ✓" : "Save" }}
           </button>
         </div>
       </div>
@@ -194,6 +195,7 @@ const { applyModelDefaults, saveAsModelDefault } = useModelDefaults();
 const loading = ref(true);
 const edited = ref<Partial<ChatOptions>>({});
 const saved = ref(false);
+const saveError = ref(false);
 
 const caps = modelStore.getCapabilities(props.model.name);
 
@@ -213,6 +215,7 @@ function resetToGlobal() {
 }
 
 async function saveDefaults() {
+  saveError.value = false;
   try {
     await saveAsModelDefault(props.model.name, edited.value);
     saved.value = true;
@@ -220,7 +223,10 @@ async function saveDefaults() {
       saved.value = false;
     }, 1500);
   } catch {
-    // IPC failure — leave edited state intact so user can retry
+    saveError.value = true;
+    setTimeout(() => {
+      saveError.value = false;
+    }, 2000);
   }
 }
 

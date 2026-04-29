@@ -18,6 +18,9 @@ const MIGRATIONS: &[Migration] = &[
         description: "v1.0.0 baseline schema",
         sql: include_str!("sql/001_init_v1.sql"),
     },
+    // NOTE: versions 2–9 are already recorded in schema_versions on existing
+    // installs from the pre-release incremental migration system. Start new
+    // migrations at 11+ to avoid the gate silently skipping them.
     Migration {
         version: 10,
         description: "model_settings table",

@@ -73,7 +73,7 @@
         <input
           v-model="saveName"
           @keydown.enter="commitSave"
-          @keydown.escape="() => (saving.value = false)"
+          @keydown.escape="() => (saving = false)"
           placeholder="Preset name"
           maxlength="32"
           class="flex-1 min-w-0 bg-[var(--bg-input)] border border-[var(--border)] text-[var(--text)] rounded-lg px-2 py-1 text-[11px] outline-none focus:border-[var(--accent)]"
@@ -87,7 +87,7 @@
           Save
         </button>
         <button
-          @click="() => (saving.value = false)"
+          @click="() => (saving = false)"
           class="px-2 py-1 bg-[var(--bg-hover)] border border-[var(--border-strong)] text-[var(--text)] text-[10px] rounded-lg cursor-pointer"
         >
           ✕
