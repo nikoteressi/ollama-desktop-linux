@@ -144,6 +144,20 @@ pub fn update_model(conn: &Connection, id: &str, model: &str) -> Result<(), AppE
     Ok(())
 }
 
+/// Persist generation settings for a conversation.
+pub fn update_settings(conn: &Connection, id: &str, settings_json: &str) -> Result<(), AppError> {
+    let changed = conn.execute(
+        "UPDATE conversations
+         SET settings_json = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+         WHERE id = ?2",
+        rusqlite::params![settings_json, id],
+    )?;
+    if changed == 0 {
+        return Err(AppError::NotFound(format!("Conversation '{id}' not found")));
+    }
+    Ok(())
+}
+
 /// Pin or un-pin a conversation.
 pub fn set_pinned(conn: &Connection, id: &str, pinned: bool) -> Result<(), AppError> {
     let now = Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
@@ -350,6 +364,34 @@ mod tests {
 
         delete(&conn, &conv.id).unwrap();
         assert!(list(&conn, 10, 0).unwrap().is_empty());
+    }
+
+    #[test]
+    fn update_settings_persists_json() {
+        let conn = in_memory_conn();
+        let conv = create(
+            &conn,
+            NewConversation {
+                title: "Settings test".into(),
+                model: "llama3".into(),
+                settings_json: None,
+                tags: None,
+            },
+        )
+        .unwrap();
+
+        let json = r#"{"temperature":0.8,"top_p":0.9}"#;
+        update_settings(&conn, &conv.id, json).unwrap();
+
+        let updated = get_by_id(&conn, &conv.id).unwrap();
+        assert_eq!(updated.settings_json, json);
+    }
+
+    #[test]
+    fn update_settings_missing_id_returns_not_found() {
+        let conn = in_memory_conn();
+        let result = update_settings(&conn, "nonexistent-id", "{}");
+        assert!(matches!(result, Err(AppError::NotFound(_))));
     }
 
     #[test]

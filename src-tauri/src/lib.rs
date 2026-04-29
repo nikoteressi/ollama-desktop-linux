@@ -47,6 +47,7 @@ pub fn run() {
             commands::chat::delete_conversation,
             commands::chat::update_conversation_title,
             commands::chat::update_conversation_model,
+            commands::chat::update_conversation_settings,
             commands::chat::set_conversation_pinned,
             commands::chat::update_system_prompt,
             commands::chat::update_chat_draft,
