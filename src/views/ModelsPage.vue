@@ -121,10 +121,28 @@
                   <p>Loading installed models...</p>
                 </div>
                 <div
-                  v-else-if="modelStore.models.length === 0"
-                  class="text-[13px] text-[var(--text-dim)] py-12 text-center bg-[var(--bg-input)] border border-dashed border-[var(--border-subtle)] rounded-xl"
+                  v-else-if="modelStore.error"
+                  class="flex flex-col items-center gap-3 text-[13px] py-12 text-center bg-[var(--bg-input)] border border-dashed border-[var(--danger)]/40 rounded-xl"
                 >
-                  No models installed locally. Go to Library to pull one!
+                  <span class="text-[var(--danger)]">Failed to load models: {{ modelStore.error }}</span>
+                  <button
+                    @click="modelStore.fetchModels()"
+                    class="px-4 py-1.5 bg-[var(--bg-hover)] border border-[var(--border-strong)] rounded-lg text-[12px] text-[var(--text)] cursor-pointer hover:bg-[var(--bg-active)] transition-colors"
+                  >
+                    Retry
+                  </button>
+                </div>
+                <div
+                  v-else-if="modelStore.models.length === 0"
+                  class="flex flex-col items-center gap-3 text-[13px] py-12 text-center bg-[var(--bg-input)] border border-dashed border-[var(--border-subtle)] rounded-xl"
+                >
+                  <span class="text-[var(--text-dim)]">No models installed locally. Go to Library to pull one!</span>
+                  <button
+                    @click="modelStore.fetchModels()"
+                    class="px-4 py-1.5 bg-[var(--bg-hover)] border border-[var(--border-strong)] rounded-lg text-[12px] text-[var(--text)] cursor-pointer hover:bg-[var(--bg-active)] transition-colors"
+                  >
+                    Refresh
+                  </button>
                 </div>
                 <div v-else class="flex flex-col gap-1.5">
                   <p
