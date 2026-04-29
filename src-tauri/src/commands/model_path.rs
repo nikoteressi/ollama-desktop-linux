@@ -93,12 +93,10 @@ pub async fn validate_model_path(path: String) -> Result<ModelPathInfo, AppError
         // is_dir() returns false for both, which causes system paths (parent dir mode 700)
         // to incorrectly report as non-existent.
         let (exists, accessible, model_count) = match std::fs::metadata(&resolved) {
-            Ok(m) if m.is_dir() => {
-                match std::fs::read_dir(&resolved) {
-                    Ok(_) => (true, true, count_models(&resolved)),
-                    Err(_) => (true, false, 0),
-                }
-            }
+            Ok(m) if m.is_dir() => match std::fs::read_dir(&resolved) {
+                Ok(_) => (true, true, count_models(&resolved)),
+                Err(_) => (true, false, 0),
+            },
             Ok(_) => (false, false, 0), // exists but is a file, not a dir
             Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
                 // Parent directory not traversable (e.g. /usr/share/ollama/.ollama/ is mode 700).
@@ -144,10 +142,7 @@ async fn detect_service_type() -> ServiceType {
     }
 
     // Fall back to system service
-    let system_checks: &[&[&str]] = &[
-        &["is-enabled", "ollama"],
-        &["is-active", "ollama"],
-    ];
+    let system_checks: &[&[&str]] = &[&["is-enabled", "ollama"], &["is-active", "ollama"]];
     for args in system_checks {
         if run_systemctl(args).await {
             return ServiceType::System;
@@ -161,11 +156,11 @@ async fn detect_service_type() -> ServiceType {
 
 /// Remove the user-service override and restart Ollama so it falls back to its default model path.
 async fn clear_user_service() -> Result<ApplyModelPathResult, AppError> {
-    let home = std::env::var("HOME")
-        .map_err(|_| AppError::Internal("HOME env var not set".into()))?;
+    let home =
+        std::env::var("HOME").map_err(|_| AppError::Internal("HOME env var not set".into()))?;
 
-    let override_path = PathBuf::from(&home)
-        .join(".config/systemd/user/ollama.service.d/override.conf");
+    let override_path =
+        PathBuf::from(&home).join(".config/systemd/user/ollama.service.d/override.conf");
 
     // Best-effort removal; if the file doesn't exist, that's fine.
     let _ = std::fs::remove_file(&override_path);
@@ -208,8 +203,7 @@ async fn clear_user_service() -> Result<ApplyModelPathResult, AppError> {
 
 /// Remove the system-service override via pkexec and restart Ollama.
 async fn clear_system_service() -> Result<ApplyModelPathResult, AppError> {
-    let script =
-        "rm -f /etc/systemd/system/ollama.service.d/override.conf && \
+    let script = "rm -f /etc/systemd/system/ollama.service.d/override.conf && \
          systemctl daemon-reload && \
          systemctl restart ollama";
 
@@ -236,13 +230,15 @@ async fn clear_system_service() -> Result<ApplyModelPathResult, AppError> {
 }
 
 async fn apply_user_service(resolved_path: &str) -> Result<ApplyModelPathResult, AppError> {
-    let home = std::env::var("HOME")
-        .map_err(|_| AppError::Internal("HOME env var not set".into()))?;
+    let home =
+        std::env::var("HOME").map_err(|_| AppError::Internal("HOME env var not set".into()))?;
 
-    let override_dir = PathBuf::from(&home)
-        .join(".config/systemd/user/ollama.service.d");
+    let override_dir = PathBuf::from(&home).join(".config/systemd/user/ollama.service.d");
     std::fs::create_dir_all(&override_dir)?;
-    std::fs::write(override_dir.join("override.conf"), override_file_content(resolved_path))?;
+    std::fs::write(
+        override_dir.join("override.conf"),
+        override_file_content(resolved_path),
+    )?;
 
     let reload_ok = Command::new("systemctl")
         .args(["--user", "daemon-reload"])
@@ -381,10 +377,7 @@ mod tests {
     #[test]
     fn expand_tilde_with_subpath() {
         let home = std::env::var("HOME").unwrap();
-        assert_eq!(
-            expand_tilde("~/models"),
-            PathBuf::from(home).join("models")
-        );
+        assert_eq!(expand_tilde("~/models"), PathBuf::from(home).join("models"));
     }
 
     #[test]
@@ -480,7 +473,9 @@ mod tests {
     #[tokio::test]
     async fn validate_dir_with_models() {
         let dir = tempfile::TempDir::new().unwrap();
-        let base = dir.path().join("manifests/registry.ollama.ai/library/llama3");
+        let base = dir
+            .path()
+            .join("manifests/registry.ollama.ai/library/llama3");
         std::fs::create_dir_all(&base).unwrap();
         std::fs::write(base.join("latest"), b"{}").unwrap();
 
