@@ -751,6 +751,25 @@ interface ModelPathResult {
   models_found_at_path: boolean;
 }
 
+async function restartOllamaAndRefresh() {
+  try {
+    await tauriApi.stopOllama();
+  } catch (e) {
+    console.warn(
+      "[applyModelPath] stop_ollama failed (may already be stopped):",
+      e,
+    );
+  }
+  try {
+    await tauriApi.startOllama();
+  } catch (e) {
+    console.warn("[applyModelPath] start_ollama failed:", e);
+  }
+  // Give Ollama time to initialize before querying its API
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  await modelsStore.fetchModels();
+}
+
 async function applyModelPath(path: string) {
   const previousPath = settingsStore.modelPath;
   // ① Optimistic update — input reflects new path immediately
@@ -760,17 +779,7 @@ async function applyModelPath(path: string) {
   if (!path.trim()) {
     try {
       await invoke("apply_model_path", { path });
-      try {
-        await tauriApi.stopOllama();
-      } catch {
-        // ignore
-      }
-      try {
-        await tauriApi.startOllama();
-        await modelsStore.fetchModels();
-      } catch {
-        // ignore
-      }
+      await restartOllamaAndRefresh();
     } catch (err: unknown) {
       await settingsStore.updateSetting("modelPath", previousPath);
       const detail = err instanceof Error ? err.message : String(err);
@@ -789,19 +798,14 @@ async function applyModelPath(path: string) {
   try {
     // ③ Apply the new path via systemd override
     const result = await invoke<ModelPathResult>("apply_model_path", { path });
+    console.log("[applyModelPath] apply_model_path result:", result);
 
     // Restart Ollama so it picks up the new OLLAMA_MODELS env var, then refresh the model list.
-    try {
-      await tauriApi.stopOllama();
-    } catch {
-      // Ignore stop errors (service may already be stopped)
-    }
-    try {
-      await tauriApi.startOllama();
-      await modelsStore.fetchModels();
-    } catch {
-      // Service restart failed — models list may be stale, but path is saved
-    }
+    await restartOllamaAndRefresh();
+    console.log(
+      "[applyModelPath] models after refresh:",
+      modelsStore.models.length,
+    );
 
     if (!result.models_found_at_path) {
       openModal({
