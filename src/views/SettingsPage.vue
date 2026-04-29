@@ -208,14 +208,9 @@
               <template #control>
                 <input
                   v-model="settingsStore.modelPath"
-                  @change="
-                    settingsStore.updateSetting(
-                      'modelPath',
-                      settingsStore.modelPath,
-                    )
-                  "
+                  @change="applyModelPath(settingsStore.modelPath)"
                   placeholder="~/.ollama/models"
-                  class="custom-input w-36 font-mono"
+                  class="custom-input w-52 font-mono"
                 />
                 <button
                   @click="browseModelPath"
@@ -225,6 +220,87 @@
                 </button>
               </template>
             </SettingsRow>
+
+            <!-- Model path status panel -->
+            <div
+              v-if="pathValidation.status !== 'idle' || pathApply.status !== 'idle'"
+              class="flex flex-col gap-1 px-4 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[11.5px]"
+            >
+              <!-- Validation feedback -->
+              <div
+                v-if="pathValidation.status === 'checking'"
+                class="flex items-center gap-1.5 text-[var(--text-dim)]"
+              >
+                <svg
+                  class="animate-spin w-3 h-3 flex-shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                Checking path…
+              </div>
+              <div
+                v-else-if="pathValidation.status === 'error'"
+                class="flex items-center gap-1.5 text-[var(--danger)]"
+              >
+                <span class="flex-shrink-0">⚠</span>
+                {{ pathValidation.message }}
+              </div>
+              <div
+                v-else-if="pathValidation.status === 'warning'"
+                class="flex items-center gap-1.5 text-amber-500"
+              >
+                <span class="flex-shrink-0">⚠</span>
+                {{ pathValidation.message }}
+              </div>
+              <div
+                v-else-if="pathValidation.status === 'ok'"
+                class="flex items-center gap-1.5 text-[var(--accent)]"
+              >
+                <span class="flex-shrink-0">✓</span>
+                {{ pathValidation.message }}
+              </div>
+
+              <!-- Apply feedback -->
+              <div
+                v-if="pathApply.status === 'applying'"
+                class="flex items-center gap-1.5 text-[var(--text-dim)]"
+              >
+                <svg
+                  class="animate-spin w-3 h-3 flex-shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                Applying…
+              </div>
+              <div
+                v-else-if="pathApply.status === 'success'"
+                class="flex items-center gap-1.5 text-[var(--accent)]"
+              >
+                <span class="flex-shrink-0">✓</span>
+                {{ pathApply.message }}
+              </div>
+              <div
+                v-else-if="pathApply.status === 'error'"
+                class="flex items-center gap-1.5 text-[var(--danger)]"
+              >
+                <span class="flex-shrink-0">✗</span>
+                {{ pathApply.message }}
+              </div>
+              <div
+                v-else-if="pathApply.status === 'manual'"
+                class="text-[var(--text-dim)]"
+              >
+                {{ pathApply.message }}
+              </div>
+            </div>
 
             <SettingsRow icon="layout">
               <template #label>Context length</template>
@@ -656,6 +732,27 @@ onBeforeUnmount(() => {
   if (_validateTimer) clearTimeout(_validateTimer);
 });
 
+async function applyModelPath(path: string) {
+  if (!path) return;
+  pathApply.value = { status: "applying", message: "" };
+  try {
+    const result = await invoke<ApplyModelPathResult>("apply_model_path", {
+      path,
+    });
+    if (result.service_type === "none") {
+      pathApply.value = { status: "manual", message: result.message };
+    } else {
+      pathApply.value = { status: "success", message: result.message };
+    }
+  } catch (err: unknown) {
+    const msg =
+      typeof err === "string"
+        ? err
+        : (err as { message?: string })?.message ?? "Unknown error";
+    pathApply.value = { status: "error", message: msg };
+  }
+}
+
 const themeOptions = [
   { id: "system" as const, label: "System", sub: "Follows OS" },
   { id: "light" as const, label: "Light", sub: "Always light" },
@@ -850,7 +947,8 @@ async function browseModelPath() {
   try {
     const selected = await open({ directory: true, multiple: false });
     if (selected && typeof selected === "string") {
-      await settingsStore.updateSetting("modelPath", selected);
+      settingsStore.modelPath = selected;
+      await applyModelPath(selected);
     }
   } catch (err) {
     console.error("Failed to pick directory:", err);
