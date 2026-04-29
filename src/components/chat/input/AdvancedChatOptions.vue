@@ -69,6 +69,7 @@
         </div>
       </div>
 
+      <!-- Preset name input (shown while naming a new preset) -->
       <div v-if="saving" class="flex gap-1.5 items-center">
         <input
           v-model="saveName"
@@ -93,35 +94,40 @@
           ✕
         </button>
       </div>
-      <button
-        v-else
-        @click="startSave"
-        class="self-start text-[10px] text-[var(--text-dim)] hover:text-[var(--accent)] transition-colors cursor-pointer"
-      >
-        + Save current as preset
-      </button>
 
-      <div v-if="props.model" class="flex justify-end">
+      <!-- Action row (shown when not naming a preset) -->
+      <div v-else class="flex items-center" :class="props.model ? 'justify-between' : 'justify-start'">
         <button
+          @click="startSave"
+          class="flex items-center gap-1 text-[10px] text-[var(--text-muted)] hover:text-[var(--text)] border border-[var(--border)] hover:border-[var(--border-strong)] rounded-md px-2 py-1 transition-colors cursor-pointer"
+        >
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Save as preset
+        </button>
+
+        <button
+          v-if="props.model"
           @click="handleSaveAsModelDefault"
           :disabled="savingDefault"
-          class="text-[10px] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          class="flex items-center gap-1 text-[10px] border rounded-md px-2 py-1 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           :class="
             saveDefaultError
-              ? 'text-red-400'
+              ? 'text-red-400 border-red-500/30 bg-red-500/5'
               : savedAsDefault
-                ? 'text-[var(--accent)] font-semibold'
-                : 'text-[var(--text-dim)] hover:text-[var(--accent)]'
+                ? 'text-[var(--accent)] border-[var(--accent)]/30 bg-[var(--accent)]/5 font-semibold'
+                : 'text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text)] hover:border-[var(--border-strong)]'
           "
         >
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+          </svg>
           {{
-            savingDefault
-              ? "Saving…"
-              : saveDefaultError
-                ? "Failed to save ✕"
-                : savedAsDefault
-                  ? "Saved as model default ✓"
-                  : "Save as model default"
+            savingDefault ? "Saving…"
+            : saveDefaultError ? "Failed ✕"
+            : savedAsDefault ? "Saved ✓"
+            : "Set as default"
           }}
         </button>
       </div>

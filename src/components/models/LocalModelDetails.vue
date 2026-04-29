@@ -50,21 +50,9 @@
           >
         </p>
         <div class="flex gap-1.5 mt-2 flex-wrap">
-          <span
-            v-if="caps?.vision"
-            class="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20"
-            >vision</span
-          >
-          <span
-            v-if="caps?.tools"
-            class="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20"
-            >tools</span
-          >
-          <span
-            v-if="caps?.thinking"
-            class="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20"
-            >thinking</span
-          >
+          <span v-if="caps?.vision" class="model-tag tag-vision">vision</span>
+          <span v-if="caps?.tools" class="model-tag tag-tools">tools</span>
+          <span v-if="caps?.thinking" class="model-tag tag-thinking">think</span>
         </div>
       </div>
       <button
