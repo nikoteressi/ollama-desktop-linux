@@ -1,13 +1,9 @@
-#[allow(unused_imports)]
 use crate::db;
-#[allow(unused_imports)]
 use crate::error::AppError;
-#[allow(unused_imports)]
 use crate::state::AppState;
 use serde::Serialize;
 use std::path::PathBuf;
 use std::process::Stdio;
-#[allow(unused_imports)]
 use tauri::State;
 use tokio::process::Command;
 
@@ -198,8 +194,11 @@ async fn apply_user_service(resolved_path: &str) -> Result<ApplyModelPathResult,
 }
 
 async fn apply_system_service(resolved_path: &str) -> Result<ApplyModelPathResult, AppError> {
-    let tmp_path = "/tmp/alpaka_ollama_override.conf";
-    std::fs::write(tmp_path, override_file_content(resolved_path))?;
+    // Use $XDG_RUNTIME_DIR (mode 0700, per-user) to avoid a world-writable /tmp symlink attack.
+    let runtime_dir = std::env::var("XDG_RUNTIME_DIR")
+        .unwrap_or_else(|_| std::env::temp_dir().to_string_lossy().into_owned());
+    let tmp_path = format!("{}/alpaka_ollama_override.conf", runtime_dir);
+    std::fs::write(&tmp_path, override_file_content(resolved_path))?;
 
     // Single pkexec call = single polkit password prompt.
     // The model path lives in the file content, not in shell args, preventing injection.
@@ -216,15 +215,18 @@ async fn apply_system_service(resolved_path: &str) -> Result<ApplyModelPathResul
         .status()
         .await;
 
-    let _ = std::fs::remove_file(tmp_path);
+    let _ = std::fs::remove_file(&tmp_path);
 
     match result {
-        Ok(s) if s.success() => Ok(ApplyModelPathResult {
-            service_type: "system".into(),
-            applied: true,
-            restarted: true,
-            message: "Ollama restarted with new model path".into(),
-        }),
+        Ok(s) if s.success() => {
+            // pkexec exited 0 → all commands in the &&-chain succeeded, including restart
+            Ok(ApplyModelPathResult {
+                service_type: "system".into(),
+                applied: true,
+                restarted: true,
+                message: "Ollama restarted with new model path".into(),
+            })
+        }
         Ok(_) => Err(AppError::Service(
             "Elevated access was denied or failed. Model path not applied.".into(),
         )),
