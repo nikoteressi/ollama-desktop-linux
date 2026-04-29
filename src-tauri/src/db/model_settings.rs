@@ -34,8 +34,7 @@ pub fn get(conn: &Connection, model_name: &str) -> Result<Option<ChatOptions>, A
 }
 
 pub fn set(conn: &Connection, model_name: &str, defaults: &ChatOptions) -> Result<(), AppError> {
-    let json =
-        serde_json::to_string(defaults).map_err(|e| AppError::Internal(e.to_string()))?;
+    let json = serde_json::to_string(defaults).map_err(|e| AppError::Internal(e.to_string()))?;
     conn.execute(
         "INSERT OR REPLACE INTO model_settings (model_name, defaults_json, updated_at)
          VALUES (?1, ?2, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))",
