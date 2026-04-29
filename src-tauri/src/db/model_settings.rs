@@ -17,9 +17,11 @@ pub fn get(conn: &Connection, model_name: &str) -> Result<Option<ChatOptions>, A
             if opts.temperature.is_none()
                 && opts.top_p.is_none()
                 && opts.top_k.is_none()
+                && opts.num_predict.is_none()
                 && opts.num_ctx.is_none()
                 && opts.repeat_penalty.is_none()
                 && opts.repeat_last_n.is_none()
+                && opts.seed.is_none()
             {
                 Ok(None)
             } else {
@@ -66,20 +68,21 @@ pub async fn set_async(
     .await?
 }
 
-fn in_memory_db() -> Connection {
-    let conn = Connection::open_in_memory().unwrap();
-    conn.execute_batch(
-        "PRAGMA journal_mode = WAL;
-         PRAGMA foreign_keys = ON;",
-    )
-    .unwrap();
-    crate::db::migrations::run(&conn).unwrap();
-    conn
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Arc, Mutex};
+
+    fn in_memory_db() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "PRAGMA journal_mode = WAL;
+             PRAGMA foreign_keys = ON;",
+        )
+        .unwrap();
+        crate::db::migrations::run(&conn).unwrap();
+        conn
+    }
 
     #[test]
     fn test_get_missing_model_returns_none() {
@@ -128,5 +131,31 @@ mod tests {
         set(&conn, "empty-model:latest", &empty).unwrap();
         let result = get(&conn, "empty-model:latest").unwrap();
         assert!(result.is_none(), "all-None ChatOptions should return None");
+    }
+
+    #[tokio::test]
+    async fn test_async_round_trip() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "PRAGMA journal_mode = WAL;
+             PRAGMA foreign_keys = ON;",
+        )
+        .unwrap();
+        crate::db::migrations::run(&conn).unwrap();
+        let db = Arc::new(Mutex::new(conn));
+
+        let opts = ChatOptions {
+            temperature: Some(0.3),
+            ..Default::default()
+        };
+        set_async(db.clone(), "llama3:latest".to_string(), opts)
+            .await
+            .unwrap();
+
+        let result = get_async(db.clone(), "llama3:latest".to_string())
+            .await
+            .unwrap();
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().temperature, Some(0.3));
     }
 }

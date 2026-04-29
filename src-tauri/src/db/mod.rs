@@ -2,9 +2,9 @@ pub mod conversations;
 pub mod folders;
 pub mod hosts;
 pub mod messages;
+pub mod model_settings;
 pub mod migrations;
 pub mod repo;
-pub mod model_settings;
 pub mod settings;
 
 use std::{
