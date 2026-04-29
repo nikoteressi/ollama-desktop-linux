@@ -223,7 +223,9 @@
 
             <!-- Model path status panel -->
             <div
-              v-if="pathValidation.status !== 'idle' || pathApply.status !== 'idle'"
+              v-if="
+                pathValidation.status !== 'idle' || pathApply.status !== 'idle'
+              "
               class="flex flex-col gap-1 px-4 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[11.5px]"
             >
               <!-- Validation feedback -->
@@ -619,7 +621,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount, markRaw, h, type Component } from "vue";
+import {
+  ref,
+  computed,
+  watch,
+  onBeforeUnmount,
+  markRaw,
+  h,
+  type Component,
+} from "vue";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import ConfirmationModal from "../components/shared/ConfirmationModal.vue";
@@ -726,6 +736,7 @@ watch(
       }
     }, 500);
   },
+  { immediate: true },
 );
 
 onBeforeUnmount(() => {
@@ -748,7 +759,7 @@ async function applyModelPath(path: string) {
     const msg =
       typeof err === "string"
         ? err
-        : (err as { message?: string })?.message ?? "Unknown error";
+        : ((err as { message?: string })?.message ?? "Unknown error");
     pathApply.value = { status: "error", message: msg };
   }
 }
