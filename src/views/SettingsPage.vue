@@ -332,130 +332,153 @@
               </template>
             </SettingsRow>
 
-            <div class="mt-4 mb-2">
-              <h2
-                class="text-[13px] font-bold text-[var(--text-heading)] uppercase tracking-wider opacity-60"
+            <!-- Presets -->
+            <div class="settings-card gap-3">
+              <p class="text-[13.5px] font-bold text-[var(--text)]">Presets</p>
+
+              <div
+                class="max-h-[220px] overflow-y-auto flex flex-col gap-1 pr-0.5"
               >
-                Global Model Parameters
-              </h2>
+                <div
+                  v-for="preset in settingsStore.presets"
+                  :key="preset.id"
+                  @click="selectPreviewPreset(preset.id)"
+                  class="flex items-center justify-between px-3 py-2 rounded-xl border transition-all cursor-pointer select-none"
+                  :class="
+                    previewPresetId === preset.id
+                      ? 'bg-[var(--accent-muted)] border-[var(--accent)]'
+                      : 'bg-[var(--bg-elevated)] border-[var(--border)] hover:border-[var(--border-strong)]'
+                  "
+                >
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="text-[12.5px] font-semibold"
+                      :class="
+                        previewPresetId === preset.id
+                          ? 'text-[var(--accent)]'
+                          : 'text-[var(--text)]'
+                      "
+                      >{{ preset.name }}</span
+                    >
+                    <span
+                      v-if="settingsStore.defaultPresetId === preset.id"
+                      class="text-[10px] px-1.5 py-0.5 bg-[var(--accent)] text-white rounded-full font-bold leading-none"
+                      >Default</span
+                    >
+                  </div>
+                  <button
+                    v-if="!preset.isBuiltin"
+                    @click.stop="confirmDeletePreset(preset.id, preset.name)"
+                    class="text-[var(--text-dim)] hover:text-[var(--danger)] transition-colors cursor-pointer text-[13px] leading-none"
+                    title="Delete preset"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              <div
+                class="flex flex-col gap-4 pt-3 border-t border-[var(--border-subtle)]"
+              >
+                <SettingsSlider
+                  label="Temperature"
+                  :model-value="localOptions.temperature"
+                  @update:model-value="updateLocalOption('temperature', $event)"
+                  :min="0"
+                  :max="1"
+                  :step="0.1"
+                  compact
+                />
+                <SettingsSlider
+                  label="Top P"
+                  :model-value="localOptions.top_p"
+                  @update:model-value="updateLocalOption('top_p', $event)"
+                  :min="0"
+                  :max="1"
+                  :step="0.05"
+                  compact
+                />
+                <SettingsSlider
+                  label="Top K"
+                  :model-value="localOptions.top_k"
+                  @update:model-value="updateLocalOption('top_k', $event)"
+                  :min="0"
+                  :max="100"
+                  :step="1"
+                  compact
+                />
+                <SettingsSlider
+                  label="Repeat Penalty"
+                  :model-value="localOptions.repeat_penalty"
+                  @update:model-value="
+                    updateLocalOption('repeat_penalty', $event)
+                  "
+                  :min="1"
+                  :max="2"
+                  :step="0.05"
+                  compact
+                />
+                <SettingsSlider
+                  label="Repeat Last N"
+                  :model-value="localOptions.repeat_last_n"
+                  @update:model-value="
+                    updateLocalOption('repeat_last_n', $event)
+                  "
+                  :min="0"
+                  :max="128"
+                  :step="8"
+                  compact
+                />
+              </div>
+
+              <div
+                class="flex items-center justify-between pt-2 border-t border-[var(--border-subtle)]"
+              >
+                <button
+                  v-if="
+                    previewPresetId &&
+                    settingsStore.defaultPresetId !== previewPresetId
+                  "
+                  @click="settingsStore.updateDefaultPreset(previewPresetId)"
+                  class="text-[11px] text-[var(--accent)] font-bold hover:underline cursor-pointer"
+                >
+                  Set as Default
+                </button>
+                <div v-else class="flex-1" />
+
+                <div v-if="savingPreset" class="flex gap-1.5 items-center">
+                  <input
+                    v-model="newPresetName"
+                    @keydown.enter="commitSavePreset"
+                    @keydown.escape="cancelSavePreset"
+                    placeholder="Preset name"
+                    maxlength="32"
+                    class="custom-input w-32"
+                    ref="presetNameInput"
+                  />
+                  <button
+                    @click="commitSavePreset"
+                    :disabled="!newPresetName.trim()"
+                    class="px-2 py-1 bg-[var(--accent)] text-white text-[10px] font-bold rounded-lg cursor-pointer disabled:opacity-40"
+                  >
+                    Save
+                  </button>
+                  <button
+                    @click="cancelSavePreset"
+                    class="px-2 py-1 bg-[var(--bg-hover)] border border-[var(--border-strong)] text-[var(--text)] text-[10px] rounded-lg cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </div>
+                <button
+                  v-else
+                  @click="startSavingPreset"
+                  class="text-[11px] text-[var(--accent)] font-bold hover:underline cursor-pointer"
+                >
+                  + Save as preset
+                </button>
+              </div>
             </div>
-
-            <!-- Temperature -->
-            <SettingsRow icon="sliders">
-              <template #label>Temperature</template>
-              <template #subtitle
-                >Higher = creative & random; Lower = focused &
-                deterministic.</template
-              >
-              <template #control>
-                <div class="w-40">
-                  <SettingsSlider
-                    label="Temperature"
-                    :model-value="settingsStore.chatOptions.temperature"
-                    @update:model-value="
-                      settingsStore.updateChatOptions({ temperature: $event })
-                    "
-                    :min="0"
-                    :max="1"
-                    :step="0.1"
-                  />
-                </div>
-              </template>
-            </SettingsRow>
-
-            <!-- Top P -->
-            <SettingsRow icon="sliders">
-              <template #label>Top P</template>
-              <template #subtitle
-                >Filters choices by cumulative probability. Lower values focus
-                on the most likely words.</template
-              >
-              <template #control>
-                <div class="w-40">
-                  <SettingsSlider
-                    label="Top P"
-                    :model-value="settingsStore.chatOptions.top_p"
-                    @update:model-value="
-                      settingsStore.updateChatOptions({ top_p: $event })
-                    "
-                    :min="0"
-                    :max="1"
-                    :step="0.05"
-                  />
-                </div>
-              </template>
-            </SettingsRow>
-
-            <!-- Top K -->
-            <SettingsRow icon="sliders">
-              <template #label>Top K</template>
-              <template #subtitle
-                >Limits the model to the K most likely words. Prevents
-                "hallucinating" rare words.</template
-              >
-              <template #control>
-                <div class="w-40">
-                  <SettingsSlider
-                    label="Top K"
-                    :model-value="settingsStore.chatOptions.top_k"
-                    @update:model-value="
-                      settingsStore.updateChatOptions({ top_k: $event })
-                    "
-                    :min="0"
-                    :max="100"
-                    :step="1"
-                  />
-                </div>
-              </template>
-            </SettingsRow>
-
-            <!-- Repeat Penalty -->
-            <SettingsRow icon="sliders">
-              <template #label>Repeat Penalty</template>
-              <template #subtitle
-                >Prevents word/phrase repetition. 1.0 = Disable, 1.1-1.2 =
-                Recommended.</template
-              >
-              <template #control>
-                <div class="w-40">
-                  <SettingsSlider
-                    label="Repeat Penalty"
-                    :model-value="settingsStore.chatOptions.repeat_penalty"
-                    @update:model-value="
-                      settingsStore.updateChatOptions({
-                        repeat_penalty: $event,
-                      })
-                    "
-                    :min="1"
-                    :max="2"
-                    :step="0.05"
-                  />
-                </div>
-              </template>
-            </SettingsRow>
-
-            <!-- Repeat Last N -->
-            <SettingsRow icon="sliders">
-              <template #label>Repeat Last N</template>
-              <template #subtitle
-                >How far back the model looks to detect and prevent repetition.
-                Higher = more previous words are checked.</template
-              >
-              <template #control>
-                <div class="w-40">
-                  <SettingsSlider
-                    label="Repeat Last N"
-                    :model-value="settingsStore.chatOptions.repeat_last_n"
-                    @update:model-value="
-                      settingsStore.updateChatOptions({ repeat_last_n: $event })
-                    "
-                    :min="0"
-                    :max="128"
-                    :step="8"
-                  />
-                </div>
-              </template>
-            </SettingsRow>
           </div>
 
           <!-- Prompts Section -->
@@ -625,6 +648,7 @@ import {
   ref,
   computed,
   watch,
+  nextTick,
   onBeforeUnmount,
   markRaw,
   h,
@@ -640,6 +664,7 @@ import AccountSettings from "../components/settings/AccountSettings.vue";
 import HostSettings from "../components/settings/HostSettings.vue";
 import AppTabs from "../components/shared/AppTabs.vue";
 import { useSettingsStore } from "../stores/settings";
+import type { PresetOptions } from "../types/settings";
 import { useModelStore } from "../stores/models";
 import { useHostStore } from "../stores/hosts";
 import { useConfirmationModal } from "../composables/useConfirmationModal";
@@ -648,6 +673,71 @@ const settingsStore = useSettingsStore();
 const modelsStore = useModelStore();
 const hostStore = useHostStore();
 const { modal, openModal, onConfirm, onCancel } = useConfirmationModal();
+
+// ── Presets ───────────────────────────────────────────────────────────────────
+
+const previewPresetId = ref<string>(settingsStore.defaultPresetId);
+
+const localOptions = ref<PresetOptions>(
+  (() => {
+    const preset = settingsStore.presets.find(
+      (p) => p.id === settingsStore.defaultPresetId,
+    );
+    return (
+      preset?.options ?? {
+        temperature: settingsStore.chatOptions.temperature,
+        top_p: settingsStore.chatOptions.top_p,
+        top_k: settingsStore.chatOptions.top_k,
+        num_ctx: settingsStore.chatOptions.num_ctx,
+        repeat_penalty: settingsStore.chatOptions.repeat_penalty,
+        repeat_last_n: settingsStore.chatOptions.repeat_last_n,
+      }
+    );
+  })(),
+);
+
+function selectPreviewPreset(id: string) {
+  previewPresetId.value = id;
+  const preset = settingsStore.presets.find((p) => p.id === id);
+  if (preset) localOptions.value = { ...preset.options };
+}
+
+function updateLocalOption(key: keyof PresetOptions, value: number) {
+  previewPresetId.value = "";
+  localOptions.value = { ...localOptions.value, [key]: value };
+}
+
+const savingPreset = ref(false);
+const newPresetName = ref("");
+const presetNameInput = ref<HTMLInputElement | null>(null);
+
+async function startSavingPreset() {
+  savingPreset.value = true;
+  newPresetName.value = "";
+  await nextTick();
+  presetNameInput.value?.focus();
+}
+
+async function commitSavePreset() {
+  if (!newPresetName.value.trim()) return;
+  await settingsStore.saveAsPreset(newPresetName.value, localOptions.value);
+  cancelSavePreset();
+}
+
+function cancelSavePreset() {
+  savingPreset.value = false;
+  newPresetName.value = "";
+}
+
+function confirmDeletePreset(id: string, name: string) {
+  openModal({
+    title: "Delete Preset",
+    message: `Delete the "${name}" preset? This cannot be undone.`,
+    confirmLabel: "Delete",
+    kind: "danger",
+    onConfirm: () => settingsStore.deletePreset(id),
+  });
+}
 
 // ── Model path feature ────────────────────────────────────────────────────────
 

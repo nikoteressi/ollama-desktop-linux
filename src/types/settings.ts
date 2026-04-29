@@ -11,6 +11,25 @@ export interface ChatOptions {
   stop?: string[];
 }
 
+export type PresetOptions = Required<
+  Pick<
+    ChatOptions,
+    | "temperature"
+    | "top_p"
+    | "top_k"
+    | "num_ctx"
+    | "repeat_penalty"
+    | "repeat_last_n"
+  >
+>;
+
+export interface Preset {
+  id: string;
+  name: string;
+  isBuiltin: boolean;
+  options: PresetOptions;
+}
+
 export interface SettingsState {
   theme: ColorTheme;
   sidebarCollapsed: boolean;
@@ -29,6 +48,8 @@ export interface SettingsState {
   systemFormattingTemplate: string;
   systemSearchTemplate: string;
   systemFolderTemplate: string;
+  presets: Preset[];
+  defaultPresetId: string;
 }
 
 export interface AppSettings {
