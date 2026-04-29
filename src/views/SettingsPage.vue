@@ -763,15 +763,19 @@ async function applyModelPath(path: string) {
         // Model path is a local operation — ensure a local host is active before
         // fetching models. If the cloud host is currently active, switch to a local
         // host so list_models queries the restarted local Ollama.
-        // TODO(CL-host-type): replace URL substring check once Host gains a kind field
+        // TODO(CL-host-type): replace hostname check once Host gains a kind field
+        const isCloudUrl = (url: string) => {
+          try {
+            return new URL(url).hostname === "api.ollama.com";
+          } catch {
+            return false;
+          }
+        };
         const ensureLocalHost = async () => {
           await hostStore.fetchHosts();
           const active = hostStore.activeHost;
-          const isCloud = active?.url?.includes("api.ollama.com") ?? false;
-          if (isCloud) {
-            const local = hostStore.hosts.find(
-              (h) => !h.url.includes("api.ollama.com"),
-            );
+          if (active && isCloudUrl(active.url)) {
+            const local = hostStore.hosts.find((h) => !isCloudUrl(h.url));
             if (local) await hostStore.setActiveHost(local.id);
           }
         };
