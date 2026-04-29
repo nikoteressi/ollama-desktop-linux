@@ -750,10 +750,6 @@ const tabs: Tab[] = [
 ];
 
 // ---- Model path ----
-interface ModelPathResult {
-  models_found_at_path: boolean;
-}
-
 async function applyModelPath(path: string) {
   const previousPath = settingsStore.modelPath;
   await settingsStore.updateSetting("modelPath", path);
@@ -789,7 +785,7 @@ async function applyModelPath(path: string) {
   }
 
   try {
-    const result = await invoke<ModelPathResult>("apply_model_path", { path });
+    await invoke("apply_model_path", { path });
     try {
       await tauriApi.stopOllama();
     } catch {
@@ -802,17 +798,6 @@ async function applyModelPath(path: string) {
     }
     await new Promise((r) => setTimeout(r, 2000));
     await modelsStore.fetchModels();
-
-    openModal({
-      title: "Model Path Updated",
-      message: result.models_found_at_path
-        ? "Model path saved. Ollama restarted with new location."
-        : "No Ollama models were found at this location. Move your existing models there, then restart Ollama.",
-      confirmLabel: "OK",
-      kind: "primary",
-      hideCancel: true,
-      onConfirm: () => {},
-    });
   } catch (err: unknown) {
     // ④ Rollback: undo the optimistic update so the bad path doesn't persist
     await settingsStore.updateSetting("modelPath", previousPath);
