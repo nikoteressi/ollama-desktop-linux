@@ -640,11 +640,11 @@ import AccountSettings from "../components/settings/AccountSettings.vue";
 import HostSettings from "../components/settings/HostSettings.vue";
 import AppTabs from "../components/shared/AppTabs.vue";
 import { useSettingsStore } from "../stores/settings";
-import { useModelsStore } from "../stores/models";
+import { useModelStore } from "../stores/models";
 import { useConfirmationModal } from "../composables/useConfirmationModal";
 
 const settingsStore = useSettingsStore();
-const modelsStore = useModelsStore();
+const modelsStore = useModelStore();
 const { modal, openModal, onConfirm, onCancel } = useConfirmationModal();
 
 // ── Model path feature ────────────────────────────────────────────────────────
