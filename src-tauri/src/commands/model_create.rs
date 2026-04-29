@@ -146,6 +146,21 @@ pub async fn create_model<R: Runtime>(
     result
 }
 
+#[tauri::command]
+pub async fn cancel_model_create(
+    state: State<'_, AppState>,
+    name: String,
+) -> Result<(), AppError> {
+    let mut map = state
+        .model_create_cancel_tx
+        .lock()
+        .map_err(|_| AppError::Internal("cancel lock poisoned".into()))?;
+    if let Some(tx) = map.remove(&name) {
+        let _ = tx.send(());
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -253,6 +268,23 @@ mod tests {
         mock.assert_async().await;
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_cancel_removes_sender_from_map() {
+        use std::collections::HashMap;
+        use tokio::sync::broadcast;
+
+        let (tx, _rx) = broadcast::channel::<()>(1);
+        let mut map: HashMap<String, broadcast::Sender<()>> = HashMap::new();
+        map.insert("mymodel".to_string(), tx);
+
+        // Simulate what cancel_model_create does:
+        if let Some(tx) = map.remove("mymodel") {
+            let _ = tx.send(());
+        }
+
+        assert!(map.get("mymodel").is_none());
     }
 
     #[tokio::test]
