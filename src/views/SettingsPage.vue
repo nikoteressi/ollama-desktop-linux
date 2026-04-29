@@ -754,35 +754,25 @@ interface ModelPathResult {
   models_found_at_path: boolean;
 }
 
-async function restartOllamaAndRefresh() {
-  try {
-    await tauriApi.stopOllama();
-  } catch (e) {
-    console.warn(
-      "[applyModelPath] stop_ollama failed (may already be stopped):",
-      e,
-    );
-  }
-  try {
-    await tauriApi.startOllama();
-  } catch (e) {
-    console.warn("[applyModelPath] start_ollama failed:", e);
-  }
-  // Give Ollama time to initialize before querying its API
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-  await modelsStore.fetchModels();
-}
-
 async function applyModelPath(path: string) {
   const previousPath = settingsStore.modelPath;
-  // ① Optimistic update — input reflects new path immediately
   await settingsStore.updateSetting("modelPath", path);
 
-  // ② Reset / empty path: remove the systemd override
   if (!path.trim()) {
     try {
       await invoke("apply_model_path", { path });
-      await restartOllamaAndRefresh();
+      try {
+        await tauriApi.stopOllama();
+      } catch {
+        /* ignore */
+      }
+      try {
+        await tauriApi.startOllama();
+      } catch {
+        /* ignore */
+      }
+      await new Promise((r) => setTimeout(r, 2000));
+      await modelsStore.fetchModels();
     } catch (err: unknown) {
       await settingsStore.updateSetting("modelPath", previousPath);
       const detail = err instanceof Error ? err.message : String(err);
@@ -799,28 +789,30 @@ async function applyModelPath(path: string) {
   }
 
   try {
-    // ③ Apply the new path via systemd override
     const result = await invoke<ModelPathResult>("apply_model_path", { path });
-    console.log("[applyModelPath] apply_model_path result:", result);
-
-    // Restart Ollama so it picks up the new OLLAMA_MODELS env var, then refresh the model list.
-    await restartOllamaAndRefresh();
-    console.log(
-      "[applyModelPath] models after refresh:",
-      modelsStore.models.length,
-    );
-
-    if (!result.models_found_at_path) {
-      openModal({
-        title: "Model Path Updated",
-        message:
-          "No Ollama models were found at this location. Move your existing models there and the path will be used on next Ollama start.",
-        confirmLabel: "OK",
-        kind: "primary",
-        hideCancel: true,
-        onConfirm: () => {},
-      });
+    try {
+      await tauriApi.stopOllama();
+    } catch {
+      /* ignore */
     }
+    try {
+      await tauriApi.startOllama();
+    } catch {
+      /* ignore */
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+    await modelsStore.fetchModels();
+
+    openModal({
+      title: "Model Path Updated",
+      message: result.models_found_at_path
+        ? "Model path saved. Ollama restarted with new location."
+        : "No Ollama models were found at this location. Move your existing models there, then restart Ollama.",
+      confirmLabel: "OK",
+      kind: "primary",
+      hideCancel: true,
+      onConfirm: () => {},
+    });
   } catch (err: unknown) {
     // ④ Rollback: undo the optimistic update so the bad path doesn't persist
     await settingsStore.updateSetting("modelPath", previousPath);
