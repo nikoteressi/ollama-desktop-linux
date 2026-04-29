@@ -200,7 +200,14 @@ export const useModelStore = defineStore("models", {
 
     async fetchPullHistory() {
       try {
-        this.pullHistory = await invoke<PullHistoryEntry[]>("get_pull_history");
+        const models = await invoke<Model[]>("list_models");
+        this.pullHistory = models.map((m) => ({
+          id: 0,
+          model_name: m.name,
+          status: "success",
+          started_at: m.modified_at,
+          finished_at: m.modified_at,
+        }));
       } catch (err) {
         console.error("Failed to fetch pull history:", err);
       }
