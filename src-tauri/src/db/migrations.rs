@@ -19,7 +19,7 @@ const MIGRATIONS: &[Migration] = &[
         sql: include_str!("sql/001_init_v1.sql"),
     },
     Migration {
-        version: 2,
+        version: 10,
         description: "model_settings table",
         sql: include_str!("sql/002_model_settings.sql"),
     },
