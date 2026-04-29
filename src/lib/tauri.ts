@@ -55,6 +55,9 @@ export const tauriApi = {
   updateConversationModel: (conversationId: string, model: string) =>
     invoke<void>("update_conversation_model", { conversationId, model }),
 
+  updateConversationSettings: (conversationId: string, settings: ChatOptions) =>
+    invoke<void>("update_conversation_settings", { conversationId, settings }),
+
   setConversationPinned: (conversationId: string, pinned: boolean) =>
     invoke<void>("set_conversation_pinned", { conversationId, pinned }),
 

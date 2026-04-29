@@ -214,17 +214,17 @@ watch(
   async (name) => {
     if (name && name !== "Select model") {
       await modelStore.fetchCapabilities(name);
-      // Model defaults are applied to chatOptions in memory and persisted
-      // via the draft mechanism (useDraftManager saves chatOptions on each
-      // change). For non-draft conversations, defaults are not written back
-      // to settings_json in the DB — a page refresh will lose them.
-      if (chatStore.isDraft) {
-        try {
-          chatOptions.value = await applyModelDefaults(name);
-          presetId.value = "";
-        } catch {
-          // ignore IPC failure
+      try {
+        chatOptions.value = await applyModelDefaults(name);
+        presetId.value = "";
+        if (!chatStore.isDraft && activeConvId.value) {
+          await tauriApi.updateConversationSettings(
+            activeConvId.value,
+            chatOptions.value,
+          );
         }
+      } catch {
+        // ignore IPC failure
       }
     }
   },
@@ -416,13 +416,30 @@ function loadDraft() {
       chatStore.folderContexts[activeConvId.value] = draft.linkedContexts;
     }
   } else {
-    // Reset if no draft
+    // Reset if no draft — restore chatOptions from conversation's settings_json if present
     inputContent.value = "";
     clearAttachments();
     webSearchEnabled.value = false;
     thinkEnabled.value = false;
     thinkLevel.value = "medium";
-    resetChatOptions();
+    const conv = chatStore.conversations.find(
+      (c) => c.id === activeConvId.value,
+    );
+    const savedSettings = conv?.settings_json
+      ? (() => {
+          try {
+            return JSON.parse(conv.settings_json) as ChatOptions;
+          } catch {
+            return null;
+          }
+        })()
+      : null;
+    if (savedSettings && Object.keys(savedSettings).length > 0) {
+      chatOptions.value = savedSettings;
+      presetId.value = "";
+    } else {
+      resetChatOptions();
+    }
   }
 
   nextTick(() => {
