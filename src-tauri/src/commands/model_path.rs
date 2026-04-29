@@ -88,15 +88,26 @@ pub async fn validate_model_path(path: String) -> Result<ModelPathInfo, AppError
     tokio::task::spawn_blocking(move || {
         let resolved = expand_tilde(&path);
         let resolved_str = resolved.to_string_lossy().to_string();
-        let exists = resolved.is_dir();
-        let (accessible, model_count) = if exists {
-            match std::fs::read_dir(&resolved) {
-                Ok(_) => (true, count_models(&resolved)),
-                Err(_) => (false, 0),
+
+        // Use metadata() instead of is_dir() so we can distinguish EACCES from ENOENT.
+        // is_dir() returns false for both, which causes system paths (parent dir mode 700)
+        // to incorrectly report as non-existent.
+        let (exists, accessible, model_count) = match std::fs::metadata(&resolved) {
+            Ok(m) if m.is_dir() => {
+                match std::fs::read_dir(&resolved) {
+                    Ok(_) => (true, true, count_models(&resolved)),
+                    Err(_) => (true, false, 0),
+                }
             }
-        } else {
-            (false, 0)
+            Ok(_) => (false, false, 0), // exists but is a file, not a dir
+            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+                // Parent directory not traversable (e.g. /usr/share/ollama/.ollama/ is mode 700).
+                // The path likely exists — treat as inaccessible, not missing.
+                (true, false, 0)
+            }
+            Err(_) => (false, false, 0),
         };
+
         Ok(ModelPathInfo {
             resolved_path: resolved_str,
             exists,
