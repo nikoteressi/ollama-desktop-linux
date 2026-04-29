@@ -332,6 +332,78 @@
               </template>
             </SettingsRow>
 
+            <!-- Presets -->
+            <div class="settings-card gap-3">
+              <div class="flex items-center justify-between">
+                <p class="text-[13.5px] font-bold text-[var(--text)]">
+                  Presets
+                </p>
+                <button
+                  v-if="!savingPreset"
+                  @click="savingPreset = true"
+                  class="text-[11px] text-[var(--accent)] font-bold hover:underline cursor-pointer"
+                >
+                  Save current as…
+                </button>
+              </div>
+
+              <!-- Save-as form -->
+              <div v-if="savingPreset" class="flex gap-2 items-center">
+                <input
+                  v-model="newPresetName"
+                  @keydown.enter="commitSavePreset"
+                  @keydown.escape="cancelSavePreset"
+                  placeholder="Preset name"
+                  maxlength="32"
+                  class="custom-input flex-1 min-w-0"
+                  ref="presetNameInput"
+                  autofocus
+                />
+                <button
+                  @click="commitSavePreset"
+                  :disabled="!newPresetName.trim()"
+                  class="px-3 py-1.5 bg-[var(--accent)] text-white text-[11px] font-bold rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-default hover:opacity-90 transition-opacity"
+                >
+                  Save
+                </button>
+                <button
+                  @click="cancelSavePreset"
+                  class="px-3 py-1.5 bg-[var(--bg-hover)] border border-[var(--border-strong)] text-[var(--text)] text-[11px] rounded-lg cursor-pointer hover:bg-[var(--bg-active)] transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <!-- Preset pills -->
+              <div class="flex flex-wrap gap-2">
+                <div
+                  v-for="preset in settingsStore.presets"
+                  :key="preset.id"
+                  class="flex items-center gap-1"
+                >
+                  <button
+                    @click="settingsStore.applyPreset(preset.id)"
+                    class="px-3 py-1 rounded-full text-[11.5px] font-semibold border transition-all cursor-pointer"
+                    :class="
+                      settingsStore.activePresetId === preset.id
+                        ? 'bg-[var(--accent)] text-white border-[var(--accent)] shadow-sm'
+                        : 'bg-[var(--bg-hover)] text-[var(--text)] border-[var(--border-strong)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
+                    "
+                  >
+                    {{ preset.name }}
+                  </button>
+                  <button
+                    v-if="!preset.isBuiltin"
+                    @click="confirmDeletePreset(preset.id, preset.name)"
+                    class="text-[var(--text-dim)] hover:text-[var(--danger)] transition-colors cursor-pointer text-[13px] leading-none"
+                    title="Delete preset"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div class="mt-4 mb-2">
               <h2
                 class="text-[13px] font-bold text-[var(--text-heading)] uppercase tracking-wider opacity-60"
@@ -625,6 +697,7 @@ import {
   ref,
   computed,
   watch,
+  nextTick,
   onBeforeUnmount,
   markRaw,
   h,
@@ -648,6 +721,40 @@ const settingsStore = useSettingsStore();
 const modelsStore = useModelStore();
 const hostStore = useHostStore();
 const { modal, openModal, onConfirm, onCancel } = useConfirmationModal();
+
+// ── Presets ───────────────────────────────────────────────────────────────────
+
+const savingPreset = ref(false);
+const newPresetName = ref("");
+const presetNameInput = ref<HTMLInputElement | null>(null);
+
+async function commitSavePreset() {
+  if (!newPresetName.value.trim()) return;
+  await settingsStore.saveAsPreset(newPresetName.value);
+  cancelSavePreset();
+}
+
+function cancelSavePreset() {
+  savingPreset.value = false;
+  newPresetName.value = "";
+}
+
+watch(savingPreset, async (val) => {
+  if (val) {
+    await nextTick();
+    presetNameInput.value?.focus();
+  }
+});
+
+function confirmDeletePreset(id: string, name: string) {
+  openModal({
+    title: "Delete Preset",
+    message: `Delete the "${name}" preset? This cannot be undone.`,
+    confirmLabel: "Delete",
+    kind: "danger",
+    onConfirm: () => settingsStore.deletePreset(id),
+  });
+}
 
 // ── Model path feature ────────────────────────────────────────────────────────
 

@@ -5,10 +5,16 @@
     <div
       class="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2 mb-1"
     >
-      <span
-        class="text-[12px] font-bold text-[var(--text)] uppercase tracking-wider"
-        >Advanced Options</span
-      >
+      <div class="flex items-center gap-1.5">
+        <span
+          class="text-[12px] font-bold text-[var(--text)] uppercase tracking-wider"
+          >Advanced Options</span
+        >
+        <span class="text-[var(--text-dim)] text-[11px]">·</span>
+        <span class="text-[11px] font-semibold text-[var(--accent)]">{{
+          activePresetName
+        }}</span>
+      </div>
       <button
         @click="$emit('reset')"
         class="text-[10px] text-[var(--accent)] font-bold hover:underline cursor-pointer"
@@ -88,6 +94,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import { useSettingsStore } from "../../../stores/settings";
 import type { ChatOptions } from "../../../types/settings";
 import SettingsSlider from "../../settings/SettingsSlider.vue";
@@ -102,6 +109,14 @@ const emit = defineEmits<{
 }>();
 
 const settingsStore = useSettingsStore();
+
+const activePresetName = computed(() => {
+  if (!settingsStore.activePresetId) return "Custom";
+  return (
+    settingsStore.presets.find((p) => p.id === settingsStore.activePresetId)
+      ?.name ?? "Custom"
+  );
+});
 
 function updateOption(key: keyof ChatOptions, value: number) {
   emit("update:modelValue", { ...props.modelValue, [key]: value });
