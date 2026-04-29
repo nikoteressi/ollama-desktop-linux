@@ -204,12 +204,16 @@ pub fn models_exist_at_path(path: &Path) -> bool {
 
 #[tauri::command]
 pub async fn apply_model_path(path: String) -> Result<ModelPathResult, AppError> {
-    if path.is_empty() {
+    if path.trim().is_empty() {
         crate::system::systemd::remove_model_path_override().await?;
+        // models_found_at_path is not meaningful for a reset — the caller should ignore it
         return Ok(ModelPathResult { models_found_at_path: false });
     }
 
     let p = Path::new(&path);
+    if !p.is_absolute() {
+        return Err(AppError::Io(format!("Path must be absolute: {}", path)));
+    }
     if !p.is_dir() {
         return Err(AppError::Io(format!(
             "Directory does not exist: {}",
@@ -558,5 +562,17 @@ not json at all
         std::fs::create_dir_all(&manifests).unwrap();
         std::fs::write(manifests.join("registry.ollama.ai"), "data").unwrap();
         assert!(models_exist_at_path(tmp.path()));
+    }
+
+    #[tokio::test]
+    async fn apply_model_path_rejects_relative_path() {
+        let result = apply_model_path("relative/path".to_string()).await;
+        assert!(matches!(result, Err(AppError::Io(_))));
+    }
+
+    #[tokio::test]
+    async fn apply_model_path_rejects_nonexistent_dir() {
+        let result = apply_model_path("/nonexistent/path/that/cannot/exist".to_string()).await;
+        assert!(matches!(result, Err(AppError::Io(_))));
     }
 }
