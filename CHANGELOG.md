@@ -10,6 +10,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- S-09: Per-conversation preset profiles for generation settings — four built-in presets (Creative, Balanced, Precise, Code), user-defined presets with save/delete, preset selection persisted per-chat via draft, default preset applied to new conversations. Advanced Options popover shows the active preset name.
+- Security: `is_cloud_host()` now uses URL hostname parsing instead of substring match, preventing subdomain-prefix attacks that would exfiltrate the Ollama Cloud API key to attacker-controlled hosts.
 - MO-08: Configurable Ollama model storage path — Settings Engine tab writes a systemd service override (`OLLAMA_MODELS`) and restarts Ollama on save; user service handled automatically, system service via pkexec; live path validation with model count and accessibility feedback
 - CL-05: Ollama Cloud routing — stored API key is now injected as `Authorization: Bearer` on all requests to `api.ollama.com` hosts. Missing key surfaces a friendly error in the chat rather than a raw network failure. Saving a key for the first time auto-adds the Ollama Cloud host entry.
 
