@@ -49,9 +49,8 @@ function makeHost(
   overrides: Partial<Host> & { id: string; url: string },
 ): Host {
   const url = overrides.url;
-  const kind: "local" | "cloud" = url.includes("api.ollama.com")
-    ? "cloud"
-    : "local";
+  const kind: "local" | "cloud" =
+    new URL(url).hostname === "api.ollama.com" ? "cloud" : "local";
   return {
     name: "local",
     kind,
