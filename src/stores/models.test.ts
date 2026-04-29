@@ -137,4 +137,34 @@ describe("useModelStore", () => {
 
     expect(mockListen).toHaveBeenCalledTimes(2); // once for each event, not 4
   });
+
+  it("fetchModels sets error from tagged-enum object { Http: 'connection refused' }", async () => {
+    const store = useModelStore();
+    mockInvoke.mockRejectedValue({ Http: "connection refused" });
+
+    await store.fetchModels();
+
+    expect(store.error).toBe("Http: connection refused");
+    expect(store.isLoading).toBe(false);
+  });
+
+  it("fetchModels sets error from plain string rejection", async () => {
+    const store = useModelStore();
+    mockInvoke.mockRejectedValue("network timeout");
+
+    await store.fetchModels();
+
+    expect(store.error).toBe("network timeout");
+    expect(store.isLoading).toBe(false);
+  });
+
+  it("fetchModels sets error to '{}' when rejected with an empty object", async () => {
+    const store = useModelStore();
+    mockInvoke.mockRejectedValue({});
+
+    await store.fetchModels();
+
+    expect(store.error).toBe("{}");
+    expect(store.isLoading).toBe(false);
+  });
 });

@@ -760,10 +760,6 @@ async function applyModelPath(path: string) {
     } else {
       pathApply.value = { status: "success", message: result.message };
       if (result.restarted) {
-        // Model path is a local operation — ensure a local host is active before
-        // fetching models. If the cloud host is currently active, switch to a local
-        // host so list_models queries the restarted local Ollama.
-        // TODO(CL-host-type): replace hostname check once Host gains a kind field
         const isCloudUrl = (url: string) => {
           try {
             return new URL(url).hostname === "api.ollama.com";
@@ -784,8 +780,8 @@ async function applyModelPath(path: string) {
             await ensureLocalHost();
             modelsStore.fetchModels();
           }, 2000),
+          setTimeout(() => modelsStore.fetchModels(), 5000),
         );
-        _restartTimers.push(setTimeout(() => modelsStore.fetchModels(), 5000));
       }
     }
   } catch (err: unknown) {
