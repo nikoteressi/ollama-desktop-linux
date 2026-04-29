@@ -13,6 +13,7 @@ import { useDraftManager } from "../../composables/useDraftManager";
 import { useConversationLifecycle } from "../../composables/useConversationLifecycle";
 import { useContextWindow } from "../../composables/useContextWindow";
 import { useAttachments } from "../../composables/useAttachments";
+import { useModelDefaults } from "../../composables/useModelDefaults";
 import type { ChatOptions } from "../../types/settings";
 
 // Components
@@ -45,6 +46,7 @@ const modelStore = useModelStore();
 const settingsStore = useSettingsStore();
 const { persistDraft, setDraft, clearDraft } = useDraftManager();
 const { updateSystemPrompt } = useConversationLifecycle();
+const { applyModelDefaults } = useModelDefaults();
 
 const activeConvId = computed(() => chatStore.activeConversationId);
 
@@ -161,6 +163,10 @@ async function selectModel(model: string) {
       // Ignored
     }
   }
+
+  const defaults = await applyModelDefaults(model);
+  chatOptions.value = defaults;
+  presetId.value = "";
 }
 
 async function selectLibraryModel(name: string) {
