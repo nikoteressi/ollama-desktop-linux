@@ -227,6 +227,14 @@ watch(
   async (name) => {
     if (name && name !== "Select model") {
       await modelStore.fetchCapabilities(name);
+      if (chatStore.isDraft) {
+        try {
+          chatOptions.value = await applyModelDefaults(name);
+          presetId.value = "";
+        } catch {
+          // ignore IPC failure
+        }
+      }
     }
   },
   { immediate: true },
