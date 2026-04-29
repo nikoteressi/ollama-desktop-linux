@@ -52,7 +52,9 @@
         <div class="flex gap-1.5 mt-2 flex-wrap">
           <span v-if="caps?.vision" class="model-tag tag-vision">vision</span>
           <span v-if="caps?.tools" class="model-tag tag-tools">tools</span>
-          <span v-if="caps?.thinking" class="model-tag tag-thinking">think</span>
+          <span v-if="caps?.thinking" class="model-tag tag-thinking"
+            >think</span
+          >
         </div>
       </div>
       <button
@@ -150,7 +152,11 @@
             data-testid="save-defaults"
             @click="saveDefaults"
             class="px-4 py-1.5 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
-            :class="saveError ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white'"
+            :class="
+              saveError
+                ? 'bg-red-500 hover:bg-red-600 text-white'
+                : 'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white'
+            "
           >
             {{ saveError ? "Failed ✕" : saved ? "Saved ✓" : "Save" }}
           </button>
