@@ -41,6 +41,13 @@
           />
         </div>
 
+        <div v-else-if="selectedLocalModel" class="flex flex-col h-full">
+          <LocalModelDetails
+            :model="selectedLocalModel"
+            @back="selectedLocalModel = null"
+          />
+        </div>
+
         <div v-else class="flex flex-col h-full">
           <!-- Header row -->
           <div class="flex items-center gap-3 mb-1">
@@ -417,17 +424,20 @@ import AppTabs from "../components/shared/AppTabs.vue";
 import ConfirmationModal from "../components/shared/ConfirmationModal.vue";
 import ModelCard from "../components/models/ModelCard.vue";
 import LibraryModelDetails from "../components/models/LibraryModelDetails.vue";
+import LocalModelDetails from "../components/models/LocalModelDetails.vue";
 import LibraryBrowser from "../components/models/LibraryBrowser.vue";
 import CloudTagSelector from "../components/models/CloudTagSelector.vue";
 import { useModelStore } from "../stores/models";
 import { useAppOrchestration } from "../composables/useAppOrchestration";
 import { useConfirmationModal } from "../composables/useConfirmationModal";
 import { useModelLibrary } from "../composables/useModelLibrary";
-import type { ModelName, LibraryModel } from "../types/models";
+import type { ModelName, LibraryModel, Model } from "../types/models";
 import { storeToRefs } from "pinia";
 
 const modelStore = useModelStore();
 const { selectedModel } = storeToRefs(modelStore);
+
+const selectedLocalModel = ref<Model | null>(null);
 
 const modelStoreErrorMessage = computed(() => modelStore.error ?? "");
 const orchestration = useAppOrchestration();
@@ -572,8 +582,8 @@ function confirmDelete(name: string) {
 }
 
 function openLocalModel(name: string) {
-  orchestration.startNewChat(name as ModelName);
-  router.push("/chat");
+  const model = modelStore.models.find((m) => m.name === name);
+  if (model) selectedLocalModel.value = model;
 }
 
 // Subpage details
