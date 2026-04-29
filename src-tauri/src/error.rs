@@ -47,6 +47,9 @@ pub enum AppError {
 
     #[error("Service error: {0}")]
     Service(String),
+
+    #[error("Validation error: {0}")]
+    Validation(String),
 }
 
 // ── Conversions ────────────────────────────────────────────────────────────────

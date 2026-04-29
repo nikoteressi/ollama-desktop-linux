@@ -150,6 +150,41 @@ pub async fn update_conversation_title(
 }
 
 #[tauri::command]
+pub async fn update_conversation_model(
+    state: State<'_, AppState>,
+    conversation_id: String,
+    model: String,
+) -> Result<(), AppError> {
+    let db = state.db.clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = db
+            .lock()
+            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
+        conversations::update_model(&conn, &conversation_id, &model)
+    })
+    .await?
+}
+
+#[tauri::command]
+pub async fn update_conversation_settings(
+    state: State<'_, AppState>,
+    conversation_id: String,
+    settings: ChatOptions,
+) -> Result<(), AppError> {
+    super::model_settings::validate_chat_options(&settings)?;
+    let json =
+        serde_json::to_string(&settings).map_err(|e| AppError::Serialization(e.to_string()))?;
+    let db = state.db.clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = db
+            .lock()
+            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
+        conversations::update_settings(&conn, &conversation_id, &json)
+    })
+    .await?
+}
+
+#[tauri::command]
 pub async fn set_conversation_pinned(
     state: State<'_, AppState>,
     conversation_id: String,

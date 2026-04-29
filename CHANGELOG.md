@@ -10,6 +10,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- S-10: Per-model default generation settings — each installed model can have its own temperature, context window, and other generation defaults. Edit from the model detail page (Models → Local tab → click a model). Defaults auto-apply when selecting a model for a new or existing conversation. Save current chat settings as model defaults from the Advanced Options panel.
 - S-09: Per-conversation preset profiles for generation settings — four built-in presets (Creative, Balanced, Precise, Code), user-defined presets with save/delete, preset selection persisted per-chat via draft, default preset applied to new conversations. Advanced Options popover shows the active preset name.
 - Security: `is_cloud_host()` now uses URL hostname parsing instead of substring match, preventing subdomain-prefix attacks that would exfiltrate the Ollama Cloud API key to attacker-controlled hosts.
 - MO-08: Configurable Ollama model storage path — Settings Engine tab writes a systemd service override (`OLLAMA_MODELS`) and restarts Ollama on save; user service handled automatically, system service via pkexec; live path validation with model count and accessibility feedback

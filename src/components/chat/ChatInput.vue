@@ -13,6 +13,7 @@ import { useDraftManager } from "../../composables/useDraftManager";
 import { useConversationLifecycle } from "../../composables/useConversationLifecycle";
 import { useContextWindow } from "../../composables/useContextWindow";
 import { useAttachments } from "../../composables/useAttachments";
+import { useModelDefaults } from "../../composables/useModelDefaults";
 import type { ChatOptions } from "../../types/settings";
 
 // Components
@@ -45,6 +46,7 @@ const modelStore = useModelStore();
 const settingsStore = useSettingsStore();
 const { persistDraft, setDraft, clearDraft } = useDraftManager();
 const { updateSystemPrompt } = useConversationLifecycle();
+const { applyModelDefaults } = useModelDefaults();
 
 const activeConvId = computed(() => chatStore.activeConversationId);
 
@@ -161,6 +163,13 @@ async function selectModel(model: string) {
       // Ignored
     }
   }
+
+  try {
+    chatOptions.value = await applyModelDefaults(model);
+  } catch {
+    // ignore — chatOptions stays as-is on IPC failure
+  }
+  presetId.value = "";
 }
 
 async function selectLibraryModel(name: string) {
@@ -187,6 +196,25 @@ const isAdvancedOptionsOpen = ref(false);
 const chatOptions = ref<ChatOptions>({});
 const presetId = ref<string>("");
 
+function parseChatOptionsJson(raw: string): Partial<ChatOptions> | null {
+  try {
+    const obj = JSON.parse(raw);
+    if (typeof obj !== "object" || obj === null) return null;
+    const out: Partial<ChatOptions> = {};
+    if (typeof obj.temperature === "number") out.temperature = obj.temperature;
+    if (typeof obj.top_p === "number") out.top_p = obj.top_p;
+    if (typeof obj.top_k === "number") out.top_k = obj.top_k;
+    if (typeof obj.num_ctx === "number") out.num_ctx = obj.num_ctx;
+    if (typeof obj.repeat_penalty === "number")
+      out.repeat_penalty = obj.repeat_penalty;
+    if (typeof obj.repeat_last_n === "number")
+      out.repeat_last_n = obj.repeat_last_n;
+    return out;
+  } catch {
+    return null;
+  }
+}
+
 function resetChatOptions() {
   const defaultPreset = settingsStore.presets.find(
     (p) => p.id === settingsStore.defaultPresetId,
@@ -205,6 +233,18 @@ watch(
   async (name) => {
     if (name && name !== "Select model") {
       await modelStore.fetchCapabilities(name);
+      try {
+        chatOptions.value = await applyModelDefaults(name);
+        presetId.value = "";
+        if (!chatStore.isDraft && activeConvId.value) {
+          await tauriApi.updateConversationSettings(
+            activeConvId.value,
+            chatOptions.value,
+          );
+        }
+      } catch {
+        // ignore IPC failure
+      }
     }
   },
   { immediate: true },
@@ -395,13 +435,24 @@ function loadDraft() {
       chatStore.folderContexts[activeConvId.value] = draft.linkedContexts;
     }
   } else {
-    // Reset if no draft
+    // Reset if no draft — restore chatOptions from conversation's settings_json if present
     inputContent.value = "";
     clearAttachments();
     webSearchEnabled.value = false;
     thinkEnabled.value = false;
     thinkLevel.value = "medium";
-    resetChatOptions();
+    const conv = chatStore.conversations.find(
+      (c) => c.id === activeConvId.value,
+    );
+    const savedSettings = conv?.settings_json
+      ? parseChatOptionsJson(conv.settings_json)
+      : null;
+    if (savedSettings && Object.keys(savedSettings).length > 0) {
+      chatOptions.value = savedSettings;
+      presetId.value = "";
+    } else {
+      resetChatOptions();
+    }
   }
 
   nextTick(() => {
@@ -533,6 +584,7 @@ onUnmounted(() => {
           <AdvancedChatOptions
             v-model="chatOptions"
             v-model:presetId="presetId"
+            :model="chatStore.activeConversation?.model"
             @reset="resetChatOptions"
           />
         </div>

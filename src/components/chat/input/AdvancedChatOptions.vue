@@ -69,11 +69,12 @@
         </div>
       </div>
 
+      <!-- Preset name input (shown while naming a new preset) -->
       <div v-if="saving" class="flex gap-1.5 items-center">
         <input
           v-model="saveName"
           @keydown.enter="commitSave"
-          @keydown.escape="() => (saving.value = false)"
+          @keydown.escape="() => (saving = false)"
           placeholder="Preset name"
           maxlength="32"
           class="flex-1 min-w-0 bg-[var(--bg-input)] border border-[var(--border)] text-[var(--text)] rounded-lg px-2 py-1 text-[11px] outline-none focus:border-[var(--accent)]"
@@ -87,19 +88,77 @@
           Save
         </button>
         <button
-          @click="() => (saving.value = false)"
+          @click="() => (saving = false)"
           class="px-2 py-1 bg-[var(--bg-hover)] border border-[var(--border-strong)] text-[var(--text)] text-[10px] rounded-lg cursor-pointer"
         >
           ✕
         </button>
       </div>
-      <button
+
+      <!-- Action row (shown when not naming a preset) -->
+      <div
         v-else
-        @click="startSave"
-        class="self-start text-[10px] text-[var(--text-dim)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+        class="flex items-center"
+        :class="props.model ? 'justify-between' : 'justify-start'"
       >
-        + Save current as preset
-      </button>
+        <button
+          @click="startSave"
+          class="flex items-center gap-1 text-[10px] text-[var(--text-muted)] hover:text-[var(--text)] border border-[var(--border)] hover:border-[var(--border-strong)] rounded-md px-2 py-1 transition-colors cursor-pointer"
+        >
+          <svg
+            width="9"
+            height="9"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Save as preset
+        </button>
+
+        <button
+          v-if="props.model"
+          @click="handleSaveAsModelDefault"
+          :disabled="savingDefault"
+          class="flex items-center gap-1 text-[10px] border rounded-md px-2 py-1 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          :class="
+            saveDefaultError
+              ? 'text-red-400 border-red-500/30 bg-red-500/5'
+              : savedAsDefault
+                ? 'text-[var(--accent)] border-[var(--accent)]/30 bg-[var(--accent)]/5 font-semibold'
+                : 'text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text)] hover:border-[var(--border-strong)]'
+          "
+        >
+          <svg
+            width="9"
+            height="9"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          >
+            <path
+              d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+            />
+            <polyline points="17 21 17 13 7 13 7 21" />
+            <polyline points="7 3 7 8 15 8" />
+          </svg>
+          {{
+            savingDefault
+              ? "Saving…"
+              : saveDefaultError
+                ? "Failed ✕"
+                : savedAsDefault
+                  ? "Saved ✓"
+                  : "Set as default"
+          }}
+        </button>
+      </div>
     </div>
 
     <div
@@ -169,10 +228,12 @@ import { ref, computed, nextTick, onMounted, onUnmounted } from "vue";
 import { useSettingsStore } from "../../../stores/settings";
 import type { ChatOptions, PresetOptions } from "../../../types/settings";
 import SettingsSlider from "../../settings/SettingsSlider.vue";
+import { useModelDefaults } from "../../../composables/useModelDefaults";
 
 const props = defineProps<{
   modelValue: Partial<ChatOptions>;
   presetId: string;
+  model?: string;
 }>();
 
 const emit = defineEmits<{
@@ -182,10 +243,14 @@ const emit = defineEmits<{
 }>();
 
 const settingsStore = useSettingsStore();
+const { saveAsModelDefault } = useModelDefaults();
 
 const saving = ref(false);
 const saveName = ref("");
 const saveInput = ref<HTMLInputElement | null>(null);
+const savedAsDefault = ref(false);
+const savingDefault = ref(false);
+const saveDefaultError = ref(false);
 
 const isPresetOpen = ref(false);
 const presetDropdownRef = ref<HTMLElement | null>(null);
@@ -253,6 +318,40 @@ async function commitSave() {
   await settingsStore.saveAsPreset(saveName.value, options);
   saving.value = false;
   saveName.value = "";
+}
+
+async function handleSaveAsModelDefault() {
+  if (!props.model || savingDefault.value) return;
+  const effective: Partial<ChatOptions> = {
+    temperature:
+      props.modelValue.temperature ?? settingsStore.chatOptions.temperature,
+    top_p: props.modelValue.top_p ?? settingsStore.chatOptions.top_p,
+    top_k: props.modelValue.top_k ?? settingsStore.chatOptions.top_k,
+    num_ctx: props.modelValue.num_ctx ?? settingsStore.chatOptions.num_ctx,
+    repeat_penalty:
+      props.modelValue.repeat_penalty ??
+      settingsStore.chatOptions.repeat_penalty,
+    repeat_last_n:
+      props.modelValue.repeat_last_n ?? settingsStore.chatOptions.repeat_last_n,
+  };
+  savingDefault.value = true;
+  saveDefaultError.value = false;
+  savedAsDefault.value = false;
+  try {
+    await saveAsModelDefault(props.model, effective);
+    savedAsDefault.value = true;
+    setTimeout(() => {
+      savedAsDefault.value = false;
+    }, 2000);
+  } catch (e) {
+    console.error("[AdvancedChatOptions] set_model_defaults failed:", e);
+    saveDefaultError.value = true;
+    setTimeout(() => {
+      saveDefaultError.value = false;
+    }, 3000);
+  } finally {
+    savingDefault.value = false;
+  }
 }
 </script>
 

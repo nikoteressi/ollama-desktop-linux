@@ -412,6 +412,82 @@ describe("ChatInput — Submission", () => {
   });
 });
 
+describe("ChatInput — Model defaults on selection", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "get_model_capabilities")
+        return Promise.reject(new Error("mock"));
+      return Promise.resolve(undefined);
+    });
+  });
+
+  it("GIVEN a model is selected — get_model_defaults is invoked with the model name", async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "get_model_defaults")
+        return Promise.resolve({ temperature: 0.1, num_ctx: 8192 });
+      if (cmd === "update_conversation_model")
+        return Promise.resolve(undefined);
+      if (cmd === "get_model_capabilities")
+        return Promise.resolve({
+          vision: false,
+          tools: false,
+          thinking: false,
+          thinking_toggleable: false,
+          thinking_levels: [],
+        });
+      return Promise.resolve(undefined);
+    });
+
+    const chatStore = useChatStore();
+    chatStore.conversations.push(makeConversation("qwen2.5-coder:14b"));
+    chatStore.activeConversationId = "conv-test-1";
+
+    const wrapper = mountInput();
+    const vm = wrapper.vm as unknown as {
+      selectModel: (model: string) => Promise<void>;
+      chatOptions: { temperature?: number };
+    };
+
+    await vm.selectModel("qwen2.5-coder:14b");
+
+    expect(mockInvoke).toHaveBeenCalledWith("get_model_defaults", {
+      modelName: "qwen2.5-coder:14b",
+    });
+    expect(vm.chatOptions.temperature).toBe(0.1);
+  });
+
+  it("GIVEN no model defaults stored — selectModel does not throw", async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "get_model_defaults") return Promise.resolve(null);
+      if (cmd === "update_conversation_model")
+        return Promise.resolve(undefined);
+      if (cmd === "get_model_capabilities")
+        return Promise.resolve({
+          vision: false,
+          tools: false,
+          thinking: false,
+          thinking_toggleable: false,
+          thinking_levels: [],
+        });
+      return Promise.resolve(undefined);
+    });
+
+    const chatStore = useChatStore();
+    chatStore.conversations.push(makeConversation("llama3"));
+    chatStore.activeConversationId = "conv-test-1";
+
+    const wrapper = mountInput();
+    const vm = wrapper.vm as unknown as {
+      selectModel: (model: string) => Promise<void>;
+      chatOptions: Record<string, unknown>;
+    };
+
+    await expect(vm.selectModel("llama3")).resolves.not.toThrow();
+    expect(vm.chatOptions).toEqual({});
+  });
+});
+
 describe("ChatInput — Attachments", () => {
   beforeEach(() => {
     setActivePinia(createPinia());

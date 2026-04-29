@@ -3,6 +3,7 @@ pub mod folders;
 pub mod hosts;
 pub mod messages;
 pub mod migrations;
+pub mod model_settings;
 pub mod repo;
 pub mod settings;
 
