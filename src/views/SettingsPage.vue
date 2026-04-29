@@ -208,12 +208,7 @@
               <template #control>
                 <input
                   v-model="settingsStore.modelPath"
-                  @change="
-                    settingsStore.updateSetting(
-                      'modelPath',
-                      settingsStore.modelPath,
-                    )
-                  "
+                  @change="applyModelPath(settingsStore.modelPath)"
                   placeholder="~/.ollama/models"
                   class="custom-input w-36 font-mono"
                 />
@@ -749,11 +744,49 @@ const tabs: Tab[] = [
 ];
 
 // ---- Model path ----
+interface ModelPathResult {
+  models_found_at_path: boolean;
+}
+
+async function applyModelPath(path: string) {
+  // ① Update Pinia store + SQLite immediately — v-model reflects this
+  await settingsStore.updateSetting("modelPath", path);
+
+  try {
+    // ② Write systemd override (or remove it if path is empty/whitespace)
+    const result = await invoke<ModelPathResult>("apply_model_path", { path });
+
+    // ③ Inform user
+    const message = result.models_found_at_path
+      ? "Restart Ollama for the new model storage path to take effect."
+      : "No Ollama models found at this location. Move your existing models there, then restart Ollama to apply the change.";
+
+    openModal({
+      title: "Model Path Updated",
+      message,
+      confirmLabel: "OK",
+      kind: "primary",
+      hideCancel: true,
+      onConfirm: () => {},
+    });
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : String(err);
+    openModal({
+      title: "Failed to Apply Model Path",
+      message: `Could not update the Ollama model path: ${detail}`,
+      confirmLabel: "OK",
+      kind: "danger",
+      hideCancel: true,
+      onConfirm: () => {},
+    });
+  }
+}
+
 async function browseModelPath() {
   try {
     const selected = await open({ directory: true, multiple: false });
     if (selected && typeof selected === "string") {
-      await settingsStore.updateSetting("modelPath", selected);
+      await applyModelPath(selected);
     }
   } catch (err) {
     console.error("Failed to pick directory:", err);
