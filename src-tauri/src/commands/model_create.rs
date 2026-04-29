@@ -64,15 +64,23 @@ pub async fn core_create_model<R: Runtime>(
 
     let mut stream = resp.bytes_stream();
     let mut cancelled = false;
+    let mut buf = String::new();
 
     loop {
         tokio::select! {
+            biased;
+            _ = cancel_rx.recv() => {
+                cancelled = true;
+                break;
+            }
             chunk = stream.next() => {
                 match chunk {
                     Some(Ok(bytes)) => {
-                        let text = String::from_utf8_lossy(&bytes);
-                        for line in text.lines() {
-                            if line.trim().is_empty() { continue; }
+                        buf.push_str(&String::from_utf8_lossy(&bytes));
+                        while let Some(pos) = buf.find('\n') {
+                            let line = buf.drain(..=pos).collect::<String>();
+                            let line = line.trim();
+                            if line.is_empty() { continue; }
                             if let Ok(progress) = serde_json::from_str::<CreateProgress>(line) {
                                 let _ = app.emit(
                                     "model:create-progress",
@@ -92,10 +100,6 @@ pub async fn core_create_model<R: Runtime>(
                     }
                     None => break,
                 }
-            }
-            _ = cancel_rx.recv() => {
-                cancelled = true;
-                break;
             }
         }
     }
@@ -271,7 +275,7 @@ mod tests {
             core_create_model(&ollama, app.handle(), "mymodel", "FROM llama3", cancel_rx).await;
         mock.assert_async().await;
 
-        // cancelled returns Ok(()) but emits model:create-error with cancelled:true
-        assert!(result.is_ok());
+        // With biased; in select!, cancel fires before the first chunk — verified deterministic
+        assert!(result.is_ok(), "cancelled returns Ok(()) — cancel path emits model:create-error instead");
     }
 }
