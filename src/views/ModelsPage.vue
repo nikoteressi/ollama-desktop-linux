@@ -124,7 +124,13 @@
                   v-else-if="modelStore.models.length === 0"
                   class="text-[13px] text-[var(--text-dim)] py-12 text-center bg-[var(--bg-input)] border border-dashed border-[var(--border-subtle)] rounded-xl"
                 >
-                  No models installed locally. Go to Library to pull one!
+                  <span v-if="modelStore.error" class="text-[var(--danger)]">{{
+                    modelStore.error
+                  }}</span>
+                  <span v-else
+                    >No models installed locally. Go to Library to pull
+                    one!</span
+                  >
                 </div>
                 <div v-else class="flex flex-col gap-1.5">
                   <p
