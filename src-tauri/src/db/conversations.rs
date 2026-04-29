@@ -130,6 +130,17 @@ pub fn update_title(conn: &Connection, id: &str, title: &str) -> Result<(), AppE
     Ok(())
 }
 
+/// Update the model for a conversation and bump updated_at.
+pub fn update_model(conn: &Connection, id: &str, model: &str) -> Result<(), AppError> {
+    conn.execute(
+        "UPDATE conversations
+         SET model = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+         WHERE id = ?2",
+        rusqlite::params![model, id],
+    )?;
+    Ok(())
+}
+
 /// Pin or un-pin a conversation.
 pub fn set_pinned(conn: &Connection, id: &str, pinned: bool) -> Result<(), AppError> {
     let now = Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
