@@ -3,6 +3,7 @@ use crate::ollama::client::OllamaClient;
 use crate::state::AppState;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use tauri::{Emitter, State};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -185,6 +186,40 @@ pub struct ModelCapabilities {
     pub cloud: bool,
     /// Native context window in tokens from model_info.<arch>.context_length
     pub context_length: Option<u64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ModelPathResult {
+    pub models_found_at_path: bool,
+}
+
+/// Returns true when `<path>/manifests/` exists and contains at least one entry.
+pub fn models_exist_at_path(path: &Path) -> bool {
+    let manifests = path.join("manifests");
+    manifests.is_dir()
+        && std::fs::read_dir(&manifests)
+            .map(|mut d| d.next().is_some())
+            .unwrap_or(false)
+}
+
+#[tauri::command]
+pub async fn apply_model_path(path: String) -> Result<ModelPathResult, AppError> {
+    if path.is_empty() {
+        crate::system::systemd::remove_model_path_override().await?;
+        return Ok(ModelPathResult { models_found_at_path: false });
+    }
+
+    let p = Path::new(&path);
+    if !p.is_dir() {
+        return Err(AppError::Io(format!(
+            "Directory does not exist: {}",
+            path
+        )));
+    }
+
+    let models_found = models_exist_at_path(p);
+    crate::system::systemd::write_model_path_override(&path).await?;
+    Ok(ModelPathResult { models_found_at_path: models_found })
 }
 
 /// Extracts the native context window size from Ollama model_info by reading
@@ -501,5 +536,27 @@ not json at all
             "llama.context_length": "not-a-number"
         });
         assert_eq!(extract_context_length_from_info(&model_info), None);
+    }
+
+    #[test]
+    fn models_exist_returns_false_for_dir_with_no_manifests() {
+        let tmp = tempfile::tempdir().unwrap();
+        assert!(!models_exist_at_path(tmp.path()));
+    }
+
+    #[test]
+    fn models_exist_returns_false_when_manifests_dir_is_empty() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("manifests")).unwrap();
+        assert!(!models_exist_at_path(tmp.path()));
+    }
+
+    #[test]
+    fn models_exist_returns_true_when_manifests_has_entries() {
+        let tmp = tempfile::tempdir().unwrap();
+        let manifests = tmp.path().join("manifests");
+        std::fs::create_dir_all(&manifests).unwrap();
+        std::fs::write(manifests.join("registry.ollama.ai"), "data").unwrap();
+        assert!(models_exist_at_path(tmp.path()));
     }
 }
