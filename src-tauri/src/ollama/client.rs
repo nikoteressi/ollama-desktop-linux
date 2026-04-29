@@ -113,6 +113,8 @@ mod tests {
         // Subdomain-prefix attack: hostname contains "api.ollama.com" as a substring
         // but is a different domain. Must not be classified as cloud.
         assert!(!is_cloud_host("https://api.ollama.com.attacker.tld"));
-        assert!(!is_cloud_host("https://api.ollama.com.attacker.tld/api/chat"));
+        assert!(!is_cloud_host(
+            "https://api.ollama.com.attacker.tld/api/chat"
+        ));
     }
 }
