@@ -25,7 +25,7 @@ export class ModelsPage extends BasePage {
   }
 
   async navigateToLibrary(): Promise<void> {
-    const libraryTab = await $('[data-testid="models-tab-library"]')
+    const libraryTab = await $('[data-testid="settings-tab-library"]')
     await libraryTab.waitForDisplayed({ timeout: 5000 })
     await libraryTab.click()
     await this.driver.pause(300)

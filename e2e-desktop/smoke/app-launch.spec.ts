@@ -1,8 +1,4 @@
-import { BasePage } from '../pages/BasePage'
-
 describe('App Launch', () => {
-  const page = new BasePage()
-
   it('app window appears and root element is visible', async () => {
     await $('[data-testid="app-root"]').waitForDisplayed({ timeout: 15000 })
   })
@@ -13,8 +9,8 @@ describe('App Launch', () => {
   })
 
   it('navigation icon strip is visible', async () => {
-    const root = await $('[data-testid="app-root"]')
-    await expect(root).toBeDisplayed()
+    const sidebarToggle = await $('[data-testid="sidebar-toggle"]')
+    await expect(sidebarToggle).toBeDisplayed()
   })
 
   it('app does not show an error screen on cold start', async () => {

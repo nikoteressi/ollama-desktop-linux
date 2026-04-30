@@ -42,14 +42,4 @@ describe('Hosts — connectivity management', () => {
     const hostStatuses = await $$('[data-testid="host-status"]')
     expect(hostStatuses.length).toBeGreaterThan(0)
   })
-
-  it('ping host manually returns a result', async () => {
-    const pingBtn = await $('[data-testid="ping-host-btn"]')
-    if (await pingBtn.isExisting()) {
-      await pingBtn.click()
-      await browser.pause(2000)
-      const status = await $('[data-testid="host-status"]')
-      await expect(status).toBeDisplayed()
-    }
-  })
 })

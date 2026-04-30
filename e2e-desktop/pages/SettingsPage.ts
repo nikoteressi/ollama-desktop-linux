@@ -1,12 +1,6 @@
 import { BasePage } from './BasePage'
 
-type SettingsTab = 'general' | 'connectivity' | 'models' | 'prompts' | 'account' | 'maintenance' | 'advanced'
-
 export class SettingsPage extends BasePage {
-  async openSettingsTab(tab: SettingsTab): Promise<void> {
-    await this.openTab(tab)
-  }
-
   async getActiveTab(): Promise<string> {
     const tabs = await $$('[data-testid^="settings-tab-"]')
     for (const tab of tabs) {
@@ -19,8 +13,16 @@ export class SettingsPage extends BasePage {
     return ''
   }
 
-  async getMirostatValue(): Promise<string> {
-    const selector = await $('[data-testid="mirostat-selector"]')
-    return selector.getValue()
+  async getMirostatValue(): Promise<0 | 1 | 2> {
+    const buttons = await $$('[data-testid="mirostat-selector"] button')
+    for (const btn of buttons) {
+      const classes = await btn.getAttribute('class')
+      if (classes?.includes('bg-[var(--accent)]')) {
+        const text = await btn.getText()
+        if (text === 'Mirostat 1') return 1
+        if (text === 'Mirostat 2') return 2
+      }
+    }
+    return 0
   }
 }
