@@ -38,10 +38,18 @@
           v-model="modelName"
           type="text"
           placeholder="e.g. my-assistant"
-          class="bg-[var(--bg-input)] border border-[var(--border)] rounded-xl px-3 py-2 text-[13px] text-[var(--text)] placeholder-[var(--text-dim)] outline-none focus:border-[var(--accent)] transition-colors"
+          class="bg-[var(--bg-input)] border rounded-xl px-3 py-2 text-[13px] text-[var(--text)] placeholder-[var(--text-dim)] outline-none transition-colors"
+          :class="
+            nameError
+              ? 'border-[var(--danger)]'
+              : 'border-[var(--border)] focus:border-[var(--accent)]'
+          "
         />
+        <p v-if="nameError" class="text-[11px] text-[var(--danger)]">
+          {{ nameError }}
+        </p>
         <p
-          v-if="isEditing && modelName !== props.initialName"
+          v-else-if="isEditing && modelName !== props.initialName"
           class="text-[11px] text-[var(--accent)]"
         >
           Different name → creates a new model (original unchanged)
@@ -67,7 +75,7 @@
           Cancel
         </button>
         <button
-          :disabled="!modelName.trim()"
+          :disabled="!modelName.trim() || !!nameError"
           @click="handleCreate"
           class="px-4 py-1.5 text-[12px] font-semibold text-white bg-[var(--accent)] rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
         >
@@ -272,6 +280,17 @@ let editorView: EditorView | null = null;
 
 const isEditing = computed(() => !!props.initialName);
 const createState = computed(() => modelStore.creating[modelName.value]);
+
+// Ollama model names: lowercase letters, digits, hyphens, underscores, dots, colons for tags.
+// No spaces or uppercase.
+const nameError = computed(() => {
+  const n = modelName.value.trim();
+  if (!n) return "";
+  if (/\s/.test(n)) return "Name cannot contain spaces";
+  if (!/^[a-zA-Z0-9._:/-]+$/.test(n))
+    return "Only letters, digits, hyphens, underscores, dots, and colons are allowed";
+  return "";
+});
 const logText = computed(() => createState.value?.logLines.join("\n") ?? "");
 
 onMounted(async () => {
