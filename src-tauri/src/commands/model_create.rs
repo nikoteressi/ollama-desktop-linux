@@ -37,6 +37,129 @@ pub async fn get_modelfile(state: State<'_, AppState>, name: String) -> Result<S
     core_get_modelfile(&client, &name).await
 }
 
+/// Parse Modelfile text into the structured fields the Ollama 0.6+ /api/create expects.
+/// The old "modelfile" top-level string is no longer accepted; instead the endpoint
+/// takes "from", "system", "template", "parameters", "messages", and "license".
+fn build_create_payload(model_name: &str, modelfile: &str) -> serde_json::Value {
+    let mut from: Option<String> = None;
+    let mut system: Option<String> = None;
+    let mut template_val: Option<String> = None;
+    let mut license: Option<String> = None;
+    let mut parameters: serde_json::Map<String, serde_json::Value> = Default::default();
+    let mut messages: Vec<serde_json::Value> = Vec::new();
+
+    let lines: Vec<&str> = modelfile.lines().collect();
+    let mut i = 0;
+
+    while i < lines.len() {
+        let trimmed = lines[i].trim();
+        i += 1;
+
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+
+        let (keyword, rest) = trimmed
+            .split_once(char::is_whitespace)
+            .map(|(k, r)| (k.to_uppercase(), r.trim_start()))
+            .unwrap_or_else(|| (trimmed.to_uppercase(), ""));
+
+        match keyword.as_str() {
+            "FROM" => {
+                from = Some(rest.to_string());
+            }
+            "SYSTEM" => {
+                let (val, consumed) = parse_block(rest, &lines[i..]);
+                system = Some(val);
+                i += consumed;
+            }
+            "TEMPLATE" => {
+                let (val, consumed) = parse_block(rest, &lines[i..]);
+                template_val = Some(val);
+                i += consumed;
+            }
+            "LICENSE" => {
+                let (val, consumed) = parse_block(rest, &lines[i..]);
+                license = Some(val);
+                i += consumed;
+            }
+            "PARAMETER" => {
+                if let Some((key, val_str)) = rest.split_once(char::is_whitespace) {
+                    parameters.insert(key.to_string(), parse_param_value(val_str.trim()));
+                }
+            }
+            "MESSAGE" => {
+                if let Some((role, content_rest)) = rest.split_once(char::is_whitespace) {
+                    let (content_val, consumed) = parse_block(content_rest.trim(), &lines[i..]);
+                    messages.push(serde_json::json!({ "role": role, "content": content_val }));
+                    i += consumed;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut payload = serde_json::json!({ "model": model_name, "stream": true });
+    if let Some(v) = from {
+        payload["from"] = v.into();
+    }
+    if let Some(v) = system {
+        payload["system"] = v.into();
+    }
+    if let Some(v) = template_val {
+        payload["template"] = v.into();
+    }
+    if let Some(v) = license {
+        payload["license"] = v.into();
+    }
+    if !parameters.is_empty() {
+        payload["parameters"] = serde_json::Value::Object(parameters);
+    }
+    if !messages.is_empty() {
+        payload["messages"] = serde_json::Value::Array(messages);
+    }
+    payload
+}
+
+/// Parse a value that may be a bare word, a "quoted string", or a """triple-quoted block""".
+fn parse_block(start: &str, remaining: &[&str]) -> (String, usize) {
+    if let Some(after_open) = start.strip_prefix("\"\"\"") {
+        if let Some(end) = after_open.find("\"\"\"") {
+            return (after_open[..end].trim().to_string(), 0);
+        }
+        let mut value = after_open.to_string();
+        let mut consumed = 0;
+        for line in remaining {
+            consumed += 1;
+            if let Some(end) = line.find("\"\"\"") {
+                value.push('\n');
+                value.push_str(&line[..end]);
+                break;
+            }
+            value.push('\n');
+            value.push_str(line);
+        }
+        (value.trim().to_string(), consumed)
+    } else if start.starts_with('"') && start.len() >= 2 {
+        let inner = &start[1..start.len().saturating_sub(1)];
+        (inner.trim_end_matches('"').to_string(), 0)
+    } else {
+        (start.to_string(), 0)
+    }
+}
+
+fn parse_param_value(s: &str) -> serde_json::Value {
+    if let Ok(v) = s.parse::<i64>() {
+        return v.into();
+    }
+    if let Ok(v) = s.parse::<f64>() {
+        if let Some(n) = serde_json::Number::from_f64(v) {
+            return serde_json::Value::Number(n);
+        }
+    }
+    s.to_string().into()
+}
+
 pub async fn core_create_model<R: Runtime>(
     client: &OllamaClient,
     app: &tauri::AppHandle<R>,
@@ -44,11 +167,7 @@ pub async fn core_create_model<R: Runtime>(
     modelfile: &str,
     mut cancel_rx: broadcast::Receiver<()>,
 ) -> Result<(), AppError> {
-    let payload = serde_json::json!({
-        "model": name,
-        "files": { "Modelfile": modelfile },
-        "stream": true,
-    });
+    let payload = build_create_payload(name, modelfile);
 
     let resp = client.post("/api/create").json(&payload).send().await?;
 
@@ -271,6 +390,31 @@ mod tests {
         mock.assert_async().await;
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_build_payload_basic() {
+        let modelfile = "FROM llama3\n\nSYSTEM \"You are helpful.\"\nPARAMETER temperature 0.7\n";
+        let payload = build_create_payload("mymodel", modelfile);
+        assert_eq!(payload["model"], "mymodel");
+        assert_eq!(payload["from"], "llama3");
+        assert_eq!(payload["system"], "You are helpful.");
+        assert_eq!(payload["parameters"]["temperature"], 0.7);
+    }
+
+    #[test]
+    fn test_build_payload_triple_quoted_system() {
+        let modelfile = "FROM llama3\nSYSTEM \"\"\"\nYou are Mario.\n\"\"\"\n";
+        let payload = build_create_payload("mario", modelfile);
+        assert_eq!(payload["from"], "llama3");
+        assert_eq!(payload["system"], "You are Mario.");
+    }
+
+    #[test]
+    fn test_build_payload_no_from_omits_field() {
+        let payload = build_create_payload("mymodel", "SYSTEM \"hi\"\n");
+        assert!(payload.get("from").is_none() || payload["from"].is_null());
+        assert_eq!(payload["system"], "hi");
     }
 
     #[test]
