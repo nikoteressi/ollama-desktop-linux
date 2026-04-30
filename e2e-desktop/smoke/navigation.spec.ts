@@ -1,4 +1,4 @@
-import { BasePage } from '../pages/BasePage'
+import { BasePage } from '../pages/BasePage.js'
 
 describe('Navigation', () => {
   const page = new BasePage()

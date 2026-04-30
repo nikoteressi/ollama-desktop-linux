@@ -1,20 +1,15 @@
 import path from 'path'
+import { fileURLToPath } from 'url'
 import type { Options } from '@wdio/types'
-import { startTauriDriver, stopTauriDriver } from './helpers/tauri-driver'
-import { clearTestDataDir } from './fixtures/db'
+import { startTauriDriver, stopTauriDriver } from './helpers/tauri-driver.js'
+import { clearTestDataDir } from './fixtures/db.js'
 
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const APP_BINARY = path.resolve(__dirname, '../src-tauri/target/release/alpaka-desktop')
 const OLLAMA_URL = 'http://localhost:11434'
 
 export const config: Options.Testrunner = {
   runner: 'local',
-  autoCompileOpts: {
-    autoCompile: true,
-    tsNodeOpts: {
-      project: path.resolve(__dirname, 'tsconfig.json'),
-      transpileOnly: true,
-    },
-  },
   specs: ['./integration/**/*.spec.ts'],
   maxInstances: 1,
   capabilities: [

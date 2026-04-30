@@ -1,4 +1,4 @@
-import { SettingsPage } from '../pages/SettingsPage'
+import { SettingsPage } from '../pages/SettingsPage.js'
 
 describe('Settings Page', () => {
   const page = new SettingsPage()

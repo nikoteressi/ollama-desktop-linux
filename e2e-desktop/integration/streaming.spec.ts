@@ -1,4 +1,4 @@
-import { ChatPage } from '../pages/ChatPage'
+import { ChatPage } from '../pages/ChatPage.js'
 
 describe('Streaming — real token delivery', () => {
   const chat = new ChatPage()

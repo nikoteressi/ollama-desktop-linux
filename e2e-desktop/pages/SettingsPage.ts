@@ -1,4 +1,4 @@
-import { BasePage } from './BasePage'
+import { BasePage } from './BasePage.js'
 
 export class SettingsPage extends BasePage {
   async getActiveTab(): Promise<string> {

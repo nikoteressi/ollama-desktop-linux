@@ -1,4 +1,4 @@
-import { BasePage } from './BasePage'
+import { BasePage } from './BasePage.js'
 
 export class ModelsPage extends BasePage {
   get modelCards(): ReturnType<WebdriverIO.Browser['$$']> {

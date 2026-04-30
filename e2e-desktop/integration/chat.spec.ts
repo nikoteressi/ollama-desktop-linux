@@ -1,4 +1,4 @@
-import { ChatPage } from '../pages/ChatPage'
+import { ChatPage } from '../pages/ChatPage.js'
 
 const TEST_MODEL = 'qwen2:0.5b'
 

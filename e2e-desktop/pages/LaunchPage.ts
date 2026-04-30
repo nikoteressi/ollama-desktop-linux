@@ -1,4 +1,4 @@
-import { BasePage } from './BasePage'
+import { BasePage } from './BasePage.js'
 
 export class LaunchPage extends BasePage {
   get hostUrlInput(): ReturnType<WebdriverIO.Browser['$']> {

@@ -1,4 +1,4 @@
-import { ModelsPage } from '../pages/ModelsPage'
+import { ModelsPage } from '../pages/ModelsPage.js'
 
 describe('Models Page — real Ollama integration', () => {
   const models = new ModelsPage()

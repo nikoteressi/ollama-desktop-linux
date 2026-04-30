@@ -1,4 +1,4 @@
-import { SettingsPage } from '../pages/SettingsPage'
+import { SettingsPage } from '../pages/SettingsPage.js'
 
 describe('Hosts — connectivity management', () => {
   const settings = new SettingsPage()
