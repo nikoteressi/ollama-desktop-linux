@@ -46,7 +46,7 @@ pub async fn core_create_model<R: Runtime>(
 ) -> Result<(), AppError> {
     let payload = serde_json::json!({
         "model": name,
-        "modelfile": modelfile,
+        "files": { "Modelfile": modelfile },
         "stream": true,
     });
 
