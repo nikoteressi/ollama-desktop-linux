@@ -72,6 +72,7 @@ describe("HostSettings", () => {
       return Promise.resolve(undefined);
     });
 
+    // Re-init pinia so fetchHosts below picks up the mock above (beforeEach runs first with an empty mock)
     setActivePinia(createPinia());
     const { useHostStore } = await import("../../stores/hosts");
     const store = useHostStore();
