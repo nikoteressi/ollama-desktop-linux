@@ -81,5 +81,10 @@
     "node": ">=20",
     "pnpm": ">=9"
   },
-  "packageManager": "pnpm@9.15.0"
+  "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "overrides": {
+      "minimatch@<3.1.2": "3.1.5"
+    }
+  }
 }
