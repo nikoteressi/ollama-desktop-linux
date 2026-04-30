@@ -341,8 +341,14 @@ export const useModelStore = defineStore("models", {
       await listen<CreateErrorPayload>("model:create-error", (event) => {
         const { model, error, cancelled } = event.payload;
         if (this.creating[model]) {
-          this.creating[model].phase = cancelled ? "cancelled" : "error";
-          this.creating[model].error = error;
+          if (cancelled) {
+            // No reason to keep cancelled state in memory — delete immediately.
+            // CreateModelPage captures the phase locally before this fires.
+            delete this.creating[model];
+          } else {
+            this.creating[model].phase = "error";
+            this.creating[model].error = error;
+          }
         }
       });
     },

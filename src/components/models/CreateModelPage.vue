@@ -94,19 +94,18 @@
         class="flex items-center gap-3 px-4 py-3 rounded-xl border flex-shrink-0"
         :class="{
           'bg-[var(--bg-surface)] border-[var(--border)]':
-            createState?.phase === 'running',
-          'bg-green-500/10 border-green-500/30': createState?.phase === 'done',
-          'bg-red-500/10 border-red-500/30': createState?.phase === 'error',
-          'bg-yellow-500/10 border-yellow-500/30':
-            createState?.phase === 'cancelled',
+            displayPhase === 'running',
+          'bg-green-500/10 border-green-500/30': displayPhase === 'done',
+          'bg-red-500/10 border-red-500/30': displayPhase === 'error',
+          'bg-yellow-500/10 border-yellow-500/30': displayPhase === 'cancelled',
         }"
       >
         <div
-          v-if="createState?.phase === 'running'"
+          v-if="displayPhase === 'running'"
           class="w-3 h-3 rounded-full bg-[var(--accent)] animate-pulse flex-shrink-0"
         />
         <svg
-          v-else-if="createState?.phase === 'done'"
+          v-else-if="displayPhase === 'done'"
           class="w-4 h-4 text-green-400 flex-shrink-0"
           fill="none"
           viewBox="0 0 24 24"
@@ -134,13 +133,13 @@
           />
         </svg>
         <span class="text-[13px] font-medium text-[var(--text)]">
-          <template v-if="createState?.phase === 'running'"
+          <template v-if="displayPhase === 'running'"
             >Creating {{ modelName }}…</template
           >
-          <template v-else-if="createState?.phase === 'done'"
+          <template v-else-if="displayPhase === 'done'"
             >{{ modelName }} created successfully</template
           >
-          <template v-else-if="createState?.phase === 'cancelled'"
+          <template v-else-if="displayPhase === 'cancelled'"
             >Creation cancelled</template
           >
           <template v-else>Creation failed</template>
@@ -161,14 +160,14 @@
       <!-- Action buttons — always visible below the log -->
       <div class="flex items-center gap-2 justify-end">
         <button
-          v-if="createState?.phase === 'running'"
+          v-if="displayPhase === 'running'"
           :disabled="cancelSent"
           @click="handleCancel"
           class="px-4 py-1.5 text-[12px] text-[var(--danger)] border border-[var(--danger)]/40 rounded-lg hover:bg-[var(--danger)]/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {{ cancelSent ? "Cancelling…" : "Cancel" }}
         </button>
-        <template v-else-if="createState?.phase === 'done'">
+        <template v-else-if="displayPhase === 'done'">
           <button
             @click="handleDoneBack"
             class="px-4 py-1.5 text-[12px] text-[var(--text-muted)] border border-[var(--border)] rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
@@ -280,6 +279,18 @@ let editorView: EditorView | null = null;
 
 const isEditing = computed(() => !!props.initialName);
 const createState = computed(() => modelStore.creating[modelName.value]);
+
+// When the store entry is deleted (e.g. on cancel), capture the last known
+// terminal phase so the banner still renders until the user navigates away.
+const snapshotPhase = ref<"done" | "error" | "cancelled" | null>(null);
+watch(createState, (cur, prev) => {
+  if (!cur && prev && prev.phase !== "running") {
+    snapshotPhase.value = prev.phase;
+  }
+});
+const displayPhase = computed(
+  () => createState.value?.phase ?? snapshotPhase.value ?? "running",
+);
 
 // Ollama model names: lowercase letters, digits, hyphens, underscores, dots, colons for tags.
 // No spaces or uppercase.
