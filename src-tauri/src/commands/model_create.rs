@@ -45,7 +45,7 @@ pub async fn core_create_model<R: Runtime>(
     mut cancel_rx: broadcast::Receiver<()>,
 ) -> Result<(), AppError> {
     let payload = serde_json::json!({
-        "name": name,
+        "model": name,
         "modelfile": modelfile,
         "stream": true,
     });

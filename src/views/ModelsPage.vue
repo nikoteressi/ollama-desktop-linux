@@ -69,24 +69,13 @@
 
         <div v-else class="flex flex-col h-full">
           <!-- Header row -->
-          <div class="flex items-center gap-3 mb-1">
+          <div class="flex items-center justify-between mb-1">
             <h1 class="text-[17px] font-semibold text-[var(--text)]">
               Models Management
             </h1>
-          </div>
-
-          <!-- Glassy Horizontal Tabs -->
-          <div class="flex items-center gap-2 mb-1">
-            <div class="flex-1">
-              <AppTabs
-                v-model="activeTab"
-                :tabs="tabs"
-                aria-label="Models categories"
-              />
-            </div>
             <button
               @click="createModelMode = { name: '', modelfile: '' }"
-              class="flex items-center gap-1.5 text-[12px] font-semibold text-white bg-[var(--accent)] px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity flex-shrink-0"
+              class="flex items-center gap-1.5 text-[12px] font-semibold text-[var(--accent)] border border-[var(--accent-border)] px-3 py-1.5 rounded-lg hover:bg-[var(--accent-muted)] transition-colors"
             >
               <svg
                 class="w-3.5 h-3.5"
@@ -101,9 +90,16 @@
                   d="M12 4v16m8-8H4"
                 />
               </svg>
-              Create
+              Create model
             </button>
           </div>
+
+          <!-- Glassy Horizontal Tabs -->
+          <AppTabs
+            v-model="activeTab"
+            :tabs="tabs"
+            aria-label="Models categories"
+          />
 
           <div class="flex flex-col gap-4">
             <!-- Global Active Pulls -->
