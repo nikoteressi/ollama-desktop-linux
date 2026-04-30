@@ -147,9 +147,9 @@
         </span>
       </div>
 
-      <!-- Log output -->
+      <!-- Log output — fixed height so buttons are always visible below -->
       <div
-        class="flex-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-xl p-3 overflow-hidden min-h-0"
+        class="h-[220px] bg-[var(--bg-input)] border border-[var(--border)] rounded-xl p-3 overflow-hidden flex-shrink-0"
       >
         <pre
           ref="logEl"
@@ -158,8 +158,8 @@
         >
       </div>
 
-      <!-- Action buttons -->
-      <div class="flex items-center gap-2 justify-end flex-shrink-0">
+      <!-- Action buttons — always visible below the log -->
+      <div class="flex items-center gap-2 justify-end">
         <button
           v-if="createState?.phase === 'running'"
           :disabled="cancelSent"
