@@ -33,10 +33,12 @@ export class ChatPage extends BasePage {
   }
 
   async waitForStreamComplete(timeoutMs = 60000): Promise<void> {
+    // streaming-indicator is rendered with display:none (v-if controls existence)
+    // so check isExisting() rather than isDisplayed()
     await this.driver.waitUntil(
       async () => {
         const indicator = await $('[data-testid="streaming-indicator"]')
-        return !(await indicator.isDisplayed())
+        return !(await indicator.isExisting())
       },
       { timeout: timeoutMs, interval: 500 }
     )

@@ -1,0 +1,73 @@
+import { ChatPage } from '../pages/ChatPage'
+
+const TEST_MODEL = 'qwen2:0.5b'
+
+describe('Chat — real Ollama integration', () => {
+  const chat = new ChatPage()
+
+  before(async () => {
+    await chat.waitForAppReady()
+    // Navigate to settings → connectivity to verify Ollama host is online
+    await chat.clickNavIcon('settings')
+    await $('[data-testid="settings-tab-connectivity"]').waitForDisplayed({ timeout: 5000 })
+    await $('[data-testid="settings-tab-connectivity"]').click()
+    await browser.pause(300)
+    // Expand the hosts panel if collapsed
+    const expandBtn = await $('[data-testid="hosts-expand-btn"]')
+    if (await expandBtn.isExisting()) {
+      const hostStatus = await $('[data-testid="host-status"]')
+      if (!(await hostStatus.isExisting())) {
+        await expandBtn.click()
+        await browser.pause(300)
+      }
+    }
+    // Wait for host to show online status (green dot has success class)
+    await browser.waitUntil(
+      async () => {
+        const status = await $('[data-testid="host-status"]')
+        if (!(await status.isExisting())) return false
+        const classes = await status.getAttribute('class')
+        return classes?.includes('var(--success)') ?? false
+      },
+      { timeout: 15000, interval: 1000 }
+    )
+    // Navigate to chat
+    await chat.clickNavIcon('chat')
+    await $('[data-testid="chat-input"]').waitForDisplayed({ timeout: 8000 })
+  })
+
+  it('model selector shows available models', async () => {
+    const selector = await chat.modelSelector
+    await selector.waitForDisplayed({ timeout: 5000 })
+    await selector.click()
+    const option = await $(`[data-testid="model-option-${TEST_MODEL}"]`)
+    await option.waitForDisplayed({ timeout: 5000 })
+    await option.click()
+  })
+
+  it('sends a message and receives a non-empty response', async () => {
+    await chat.sendMessage('Say only the word: pong')
+    await chat.waitForStreamComplete(60000)
+    const response = await chat.lastAssistantMessageText()
+    expect(response.trim().length).toBeGreaterThan(0)
+  })
+
+  it('user message appears in conversation history', async () => {
+    const userMsgs = await chat.userMessages
+    expect(userMsgs.length).toBeGreaterThan(0)
+    const lastUserText = await userMsgs[userMsgs.length - 1].getText()
+    expect(lastUserText).toContain('pong')
+  })
+
+  it('can send a follow-up message', async () => {
+    await chat.sendMessage('Reply with just the number 42')
+    await chat.waitForStreamComplete(60000)
+    const response = await chat.lastAssistantMessageText()
+    expect(response.trim().length).toBeGreaterThan(0)
+  })
+
+  it('conversation has multiple assistant messages after two exchanges', async () => {
+    const msgs = await chat.assistantMessages
+    expect(msgs.length).toBeGreaterThanOrEqual(2)
+  })
+})

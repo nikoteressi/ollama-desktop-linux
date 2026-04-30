@@ -3,6 +3,7 @@
     class="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-lg overflow-hidden"
   >
     <button
+      data-testid="hosts-expand-btn"
       @click="hostsExpanded = !hostsExpanded"
       class="w-full flex items-center justify-between px-3.5 py-[11px] cursor-pointer hover:bg-[var(--bg-hover)] transition-colors"
     >
