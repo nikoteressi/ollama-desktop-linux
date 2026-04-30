@@ -25,4 +25,16 @@ describe('Settings Page', () => {
     const active = await page.getActiveTab()
     expect(active).toBe('models')
   })
+
+  it('can switch to advanced tab', async () => {
+    await page.openTab('advanced')
+    const active = await page.getActiveTab()
+    expect(active).toBe('advanced')
+  })
+
+  it('mirostat selector is present on engine tab', async () => {
+    await page.openTab('models')
+    const mirostat = await $('[data-testid="mirostat-selector"]')
+    await expect(mirostat).toBeDisplayed()
+  })
 })

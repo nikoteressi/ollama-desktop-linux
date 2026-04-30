@@ -52,6 +52,11 @@ describe('Chat — real Ollama integration', () => {
     expect(response.trim().length).toBeGreaterThan(0)
   })
 
+  it('assistant response contains expected content', async () => {
+    const response = await chat.lastAssistantMessageText()
+    expect(response.toLowerCase()).toContain('pong')
+  })
+
   it('user message appears in conversation history', async () => {
     const userMsgs = await chat.userMessages
     expect(userMsgs.length).toBeGreaterThan(0)

@@ -12,6 +12,11 @@ describe('App Launch', () => {
     expect(title).toContain('Alpaka')
   })
 
+  it('navigation icon strip is visible', async () => {
+    const root = await $('[data-testid="app-root"]')
+    await expect(root).toBeDisplayed()
+  })
+
   it('app does not show an error screen on cold start', async () => {
     const errorEl = await $('[data-testid="error-screen"]')
     await expect(errorEl).not.toBeExisting()

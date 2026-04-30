@@ -23,4 +23,9 @@ describe('Models Page — real Ollama integration', () => {
       await expect(card).toBeDisplayed()
     }
   })
+
+  it('library tab is accessible', async () => {
+    await models.navigateToLibrary()
+    await $('[data-testid="app-root"]').waitForDisplayed({ timeout: 5000 })
+  })
 })
