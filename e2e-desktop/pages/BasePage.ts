@@ -17,10 +17,20 @@ export class BasePage {
     await this.driver.saveScreenshot(join(dir, `${safe}_${Date.now()}.png`))
   }
 
-  async clickNavIcon(label: string): Promise<void> {
-    const btn = await $(`[aria-label="${label}"]`)
-    await btn.waitForDisplayed({ timeout: 5000 })
-    await btn.click()
+  async clickNavIcon(slug: string): Promise<void> {
+    // Nav items live in the collapsible sidebar — ensure it is open first
+    const navItem = await $(`[data-testid="nav-${slug}"]`)
+    const isVisible = await navItem.isDisplayed()
+    if (!isVisible) {
+      // Open the sidebar via its toggle button (first button in the icon strip)
+      const toggle = await $('[data-testid="sidebar-toggle"]')
+      if (await toggle.isExisting()) {
+        await toggle.click()
+        await this.driver.pause(200)
+      }
+    }
+    await navItem.waitForDisplayed({ timeout: 5000 })
+    await navItem.click()
     await this.driver.pause(300)
   }
 

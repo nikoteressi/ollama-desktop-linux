@@ -15,6 +15,7 @@
     >
       <!-- Sidebar toggle -->
       <button
+        data-testid="sidebar-toggle"
         @click="sidebarOpen = !sidebarOpen"
         class="w-8 h-8 rounded-md border-none bg-transparent flex items-center justify-center cursor-pointer transition-colors icon-btn"
         :title="sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'"
@@ -77,6 +78,7 @@
           <div
             v-for="item in navItems"
             :key="item.path"
+            :data-testid="`nav-${item.path.slice(1)}`"
             class="flex items-center gap-2.5 py-[7px] px-3 mx-1.5 my-px rounded-md cursor-pointer text-[13px]"
             :class="
               isActive(item.path) ? 'nav-item--active' : 'nav-item--inactive'
