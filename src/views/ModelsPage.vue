@@ -138,9 +138,9 @@
               </div>
             </div>
 
-            <!-- Active Creates -->
+            <!-- Active Creates — running or errored only; cancelled/done don't appear here -->
             <div
-              v-if="Object.keys(modelStore.creating).length > 0"
+              v-if="activeCreates.length > 0"
               class="flex flex-col gap-2 mb-2"
             >
               <p
@@ -149,11 +149,20 @@
                 Active Creates
               </p>
               <div
-                v-for="cs in modelStore.creating"
+                v-for="cs in activeCreates"
                 :key="'creating-' + cs.name"
-                class="bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl p-[10px_14px] cursor-pointer hover:border-[var(--accent)] transition-colors"
+                class="bg-[var(--bg-surface)] border rounded-xl p-[10px_14px] transition-colors"
+                :class="
+                  cs.phase === 'error'
+                    ? 'border-[var(--danger)]/40'
+                    : 'border-[var(--border)] cursor-pointer hover:border-[var(--accent)]'
+                "
                 @click="
-                  createModelMode = { name: cs.name, modelfile: cs.modelfile }
+                  cs.phase !== 'error' &&
+                  (createModelMode = {
+                    name: cs.name,
+                    modelfile: cs.modelfile,
+                  })
                 "
               >
                 <div class="flex items-center justify-between mb-1">
@@ -161,26 +170,50 @@
                     class="text-[13px] text-[var(--text)] font-medium truncate"
                     >{{ cs.name }}</span
                   >
-                  <span
-                    class="text-[12px] text-[var(--text-muted)] ml-2 flex-shrink-0"
-                    >{{ cs.status }}</span
+                  <div class="flex items-center gap-2 ml-2 flex-shrink-0">
+                    <span class="text-[12px] text-[var(--text-muted)]">{{
+                      cs.status
+                    }}</span>
+                    <!-- Dismiss error -->
+                    <button
+                      v-if="cs.phase === 'error'"
+                      @click.stop="modelStore.clearCreateState(cs.name)"
+                      class="w-4 h-4 flex items-center justify-center rounded text-[var(--text-dim)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+                      title="Dismiss"
+                    >
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 12 12"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      >
+                        <path d="M1 1l10 10M11 1L1 11" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <!-- Running: pulsing indicator -->
+                <div
+                  v-if="cs.phase === 'running'"
+                  class="flex items-center gap-1.5"
+                >
+                  <div
+                    class="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse flex-shrink-0"
+                  />
+                  <span class="text-[11px] text-[var(--text-dim)]"
+                    >Creating…</span
                   >
                 </div>
-                <div class="flex items-center gap-1.5">
-                  <div
-                    class="w-2 h-2 rounded-full flex-shrink-0"
-                    :class="{
-                      'bg-[var(--accent)] animate-pulse':
-                        cs.phase === 'running',
-                      'bg-green-400': cs.phase === 'done',
-                      'bg-red-400': cs.phase === 'error',
-                      'bg-yellow-400': cs.phase === 'cancelled',
-                    }"
-                  />
-                  <span class="text-[11px] text-[var(--text-dim)] capitalize">{{
-                    cs.phase
-                  }}</span>
-                </div>
+                <!-- Error: show message -->
+                <p
+                  v-else-if="cs.phase === 'error'"
+                  class="text-[11px] text-[var(--danger)] leading-snug mt-0.5"
+                >
+                  {{ cs.error }}
+                </p>
               </div>
             </div>
 
@@ -605,6 +638,14 @@ const createModelMode = ref<{
 } | null>(null);
 
 const modelStoreErrorMessage = computed(() => modelStore.error ?? "");
+
+// Only show running and errored creates in the active-creates bar.
+// Cancelled and done are handled on the CreateModelPage itself.
+const activeCreates = computed(() =>
+  Object.values(modelStore.creating).filter(
+    (cs) => cs.phase === "running" || cs.phase === "error",
+  ),
+);
 const orchestration = useAppOrchestration();
 const router = useRouter();
 const { modal, openModal, onConfirm, onCancel } = useConfirmationModal();
