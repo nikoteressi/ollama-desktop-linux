@@ -15,7 +15,7 @@ struct CreateProgress {
 pub async fn core_get_modelfile(client: &OllamaClient, name: &str) -> Result<String, AppError> {
     let resp = client
         .post("/api/show")
-        .json(&serde_json::json!({ "name": name, "verbose": false }))
+        .json(&serde_json::json!({ "model": name, "verbose": false }))
         .send()
         .await?;
 
@@ -53,7 +53,13 @@ pub async fn core_create_model<R: Runtime>(
     let resp = client.post("/api/create").json(&payload).send().await?;
 
     if !resp.status().is_success() {
-        let err_msg = format!("Ollama returned {}", resp.status());
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        let err_msg = if body.is_empty() {
+            format!("Ollama returned {}", status)
+        } else {
+            format!("Ollama returned {}: {}", status, body.trim())
+        };
         let _ = app.emit(
             "model:create-error",
             serde_json::json!({ "model": name, "error": err_msg, "cancelled": false }),

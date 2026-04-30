@@ -316,7 +316,12 @@ async function handleCreate() {
   if (!name) return;
   const content = editorView?.state.doc.toString() ?? "";
   phase.value = "progress";
-  await start(name, content);
+  try {
+    await start(name, content);
+  } catch {
+    // Error is surfaced via model:create-error event handled in the store;
+    // swallow here so Vue's global handler doesn't fire.
+  }
 }
 
 async function handleCancel() {
