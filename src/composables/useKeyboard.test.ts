@@ -17,6 +17,11 @@ vi.mock("../lib/appEvents", () => ({
   },
 }));
 
+const mockStartNewChat = vi.fn();
+vi.mock("./useAppOrchestration", () => ({
+  useAppOrchestration: () => ({ startNewChat: mockStartNewChat }),
+}));
+
 import { useKeyboard } from "./useKeyboard";
 import { useChatStore } from "../stores/chat";
 import { useSettingsStore } from "../stores/settings";
@@ -72,6 +77,7 @@ describe("useKeyboard", () => {
 
   it("Ctrl+N navigates to /chat", () => {
     fire("n", { ctrlKey: true });
+    expect(mockStartNewChat).toHaveBeenCalled();
     expect(mockRouterPush).toHaveBeenCalledWith("/chat");
   });
 
@@ -230,5 +236,25 @@ describe("useKeyboard", () => {
     chat.streaming = { ...chat.streaming, isStreaming: true };
     fire("Escape");
     expect(vi.mocked(invoke)).toHaveBeenCalledWith("stop_generation");
+  });
+
+  it("Escape fires stop_generation even when textarea is focused", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const chat = useChatStore();
+    chat.streaming = { ...chat.streaming, isStreaming: true };
+    const ta = document.createElement("textarea");
+    document.body.appendChild(ta);
+    ta.focus();
+    fire("Escape");
+    expect(vi.mocked(invoke)).toHaveBeenCalledWith("stop_generation");
+    ta.remove();
+  });
+
+  it("Escape does not call stop_generation when not streaming", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const chat = useChatStore();
+    chat.streaming = { ...chat.streaming, isStreaming: false };
+    fire("Escape");
+    expect(vi.mocked(invoke)).not.toHaveBeenCalled();
   });
 });
