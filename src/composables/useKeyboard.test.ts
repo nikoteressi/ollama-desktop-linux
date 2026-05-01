@@ -22,6 +22,11 @@ vi.mock("./useAppOrchestration", () => ({
   useAppOrchestration: () => ({ startNewChat: mockStartNewChat }),
 }));
 
+const mockCopyToClipboard = vi.fn().mockResolvedValue(true);
+vi.mock("../lib/clipboard", () => ({
+  copyToClipboard: (...args: unknown[]) => mockCopyToClipboard(...args),
+}));
+
 import { useKeyboard } from "./useKeyboard";
 import { useChatStore } from "../stores/chat";
 import { useSettingsStore } from "../stores/settings";
@@ -96,12 +101,6 @@ describe("useKeyboard", () => {
   });
 
   it("Ctrl+Shift+C copies last assistant message to clipboard", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", {
-      value: { writeText },
-      configurable: true,
-    });
-
     const chat = useChatStore();
     chat.conversations = [
       {
@@ -150,7 +149,7 @@ describe("useKeyboard", () => {
 
     fire("C", { ctrlKey: true, shiftKey: true });
     await Promise.resolve();
-    expect(writeText).toHaveBeenCalledWith("hello there");
+    expect(mockCopyToClipboard).toHaveBeenCalledWith("hello there");
   });
 
   it("Ctrl+↓ loads next conversation", () => {
@@ -232,16 +231,28 @@ describe("useKeyboard", () => {
 
   it("Escape calls stop_generation when streaming", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(invoke).mockResolvedValue(undefined);
     const chat = useChatStore();
-    chat.streaming = { ...chat.streaming, isStreaming: true };
+    chat.activeConversationId = "conv1";
+    chat.streaming = {
+      ...chat.streaming,
+      isStreaming: true,
+      currentConversationId: "conv1",
+    };
     fire("Escape");
     expect(vi.mocked(invoke)).toHaveBeenCalledWith("stop_generation");
   });
 
   it("Escape fires stop_generation even when textarea is focused", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(invoke).mockResolvedValue(undefined);
     const chat = useChatStore();
-    chat.streaming = { ...chat.streaming, isStreaming: true };
+    chat.activeConversationId = "conv1";
+    chat.streaming = {
+      ...chat.streaming,
+      isStreaming: true,
+      currentConversationId: "conv1",
+    };
     const ta = document.createElement("textarea");
     document.body.appendChild(ta);
     ta.focus();
@@ -252,6 +263,7 @@ describe("useKeyboard", () => {
 
   it("Escape does not call stop_generation when not streaming", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(invoke).mockResolvedValue(undefined);
     const chat = useChatStore();
     chat.streaming = { ...chat.streaming, isStreaming: false };
     fire("Escape");

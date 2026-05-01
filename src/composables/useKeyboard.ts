@@ -4,6 +4,7 @@ import { useChatStore } from "../stores/chat";
 import { useSettingsStore } from "../stores/settings";
 import { useAppOrchestration } from "./useAppOrchestration";
 import { appEvents, APP_EVENT } from "../lib/appEvents";
+import { copyToClipboard } from "../lib/clipboard";
 
 function isFocusedOnInput(): boolean {
   const el = document.activeElement;
@@ -12,7 +13,7 @@ function isFocusedOnInput(): boolean {
   return (
     tag === "input" ||
     tag === "textarea" ||
-    (el as HTMLElement).isContentEditable
+    (el instanceof HTMLElement && el.isContentEditable)
   );
 }
 
@@ -29,9 +30,9 @@ export function useKeyboard() {
 
     // Escape: always fires, no focus guard
     if (e.key === "Escape") {
-      if (chatStore.streaming.isStreaming) {
+      if (chatStore.isStreamingForActiveConv) {
         e.preventDefault();
-        Promise.resolve(invoke("stop_generation")).catch(() => {});
+        invoke("stop_generation").catch(() => {});
       }
       return;
     }
@@ -90,7 +91,7 @@ export function useKeyboard() {
       const messages = chatStore.activeMessages;
       const last = [...messages].reverse().find((m) => m.role === "assistant");
       if (last?.content) {
-        navigator.clipboard.writeText(last.content).catch(() => {});
+        copyToClipboard(last.content);
       }
       return;
     }
