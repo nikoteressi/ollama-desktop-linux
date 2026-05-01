@@ -24,7 +24,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          REQUIRED=("Build Check" "Test and Coverage" "Security Audit" "Spell Check (typos)")
+          REQUIRED=("Build Check" "Test and Coverage" "Security Audit" "Spell Check (typos)" "E2E Smoke Tests")
           TIMEOUT=1800
           POLL_INTERVAL=30
           DEADLINE=$(( $(date +%s) + TIMEOUT ))

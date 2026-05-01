@@ -14,7 +14,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Security: `security-audit` CI job now also runs `pnpm audit` for frontend-only PRs (previously only triggered when Rust files changed, leaving npm dep changes unaudited)
 - CI: `e2e-integration` now depends on `build-check` success — broken builds no longer trigger a wasteful full E2E + Ollama pull cycle
 - CI: cache `tauri-driver` binary across e2e jobs keyed on `Cargo.lock` hash — avoids recompiling from source on every run when the driver version hasn't changed
-- CI: release gate now also requires "Spell Check (typos)" to pass before proceeding with artifact build and publish
+- CI: release gate now also requires "Spell Check (typos)" and "E2E Smoke Tests" to pass before proceeding with artifact build and publish
 - SonarCloud: simplify two regular expressions in `MessageBubble.vue` (lines 75 and 182) from complexity 25/23 to below the allowed threshold of 20 by extracting `<tool_call>` attribute parsing into secondary regex calls
 
 ---
