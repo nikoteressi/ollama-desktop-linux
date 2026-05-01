@@ -499,7 +499,7 @@ mod tests {
             let _ = tx.send(());
         }
 
-        assert!(map.get("mymodel").is_none());
+        assert!(!map.contains_key("mymodel"));
     }
 
     #[tokio::test]

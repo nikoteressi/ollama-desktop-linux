@@ -175,24 +175,25 @@
                       cs.status
                     }}</span>
                     <!-- Dismiss error -->
-                    <button
-                      v-if="cs.phase === 'error'"
-                      @click.stop="modelStore.clearCreateState(cs.name)"
-                      class="w-4 h-4 flex items-center justify-center rounded text-[var(--text-dim)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
-                      title="Dismiss"
-                    >
-                      <svg
-                        width="10"
-                        height="10"
-                        viewBox="0 0 12 12"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
+                    <CustomTooltip text="Dismiss" wrapper-class="inline-flex">
+                      <button
+                        v-if="cs.phase === 'error'"
+                        @click.stop="modelStore.clearCreateState(cs.name)"
+                        class="w-4 h-4 flex items-center justify-center rounded text-[var(--text-dim)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
                       >
-                        <path d="M1 1l10 10M11 1L1 11" />
-                      </svg>
-                    </button>
+                        <svg
+                          width="10"
+                          height="10"
+                          viewBox="0 0 12 12"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                        >
+                          <path d="M1 1l10 10M11 1L1 11" />
+                        </svg>
+                      </button>
+                    </CustomTooltip>
                   </div>
                 </div>
                 <!-- Running: pulsing indicator -->
@@ -565,7 +566,7 @@
                         () =>
                           modelStore.isInstalled(rec.name)
                             ? openLibraryDetailsByName(rec.name)
-                            : doPullModel(rec.name as any)
+                            : doPullModel(rec.name)
                       "
                     />
                   </div>
@@ -605,13 +606,12 @@ import {
   computed,
   onMounted,
   onUnmounted,
-  markRaw,
-  h,
   watch,
   type Component,
 } from "vue";
 import { useRouter } from "vue-router";
 import AppTabs from "../components/shared/AppTabs.vue";
+import CustomTooltip from "../components/shared/CustomTooltip.vue";
 import ConfirmationModal from "../components/shared/ConfirmationModal.vue";
 import ModelCard from "../components/models/ModelCard.vue";
 import LibraryModelDetails from "../components/models/LibraryModelDetails.vue";
@@ -626,6 +626,13 @@ import { useConfirmationModal } from "../composables/useConfirmationModal";
 import { useModelLibrary } from "../composables/useModelLibrary";
 import type { ModelName, LibraryModel, Model } from "../types/models";
 import { storeToRefs } from "pinia";
+import { LIBRARY_SIZES } from "../lib/constants";
+import {
+  IconLibrary,
+  IconLocal,
+  IconCloud,
+  IconEngine,
+} from "../components/shared/icons";
 
 const modelStore = useModelStore();
 const { selectedModel } = storeToRefs(modelStore);
@@ -693,103 +700,6 @@ async function saveTagsFor(name: string) {
   editingTagsFor.value = null;
   tagInputValue.value = "";
 }
-
-// ---- Icons ----
-const IconLibrary = markRaw({
-  setup() {
-    return () =>
-      h(
-        "svg",
-        {
-          width: 14,
-          height: 14,
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          "stroke-width": 2,
-          "stroke-linecap": "round",
-          "stroke-linejoin": "round",
-        },
-        [
-          h("path", { d: "m16 6 4 14" }),
-          h("path", { d: "M12 6v14" }),
-          h("path", { d: "M8 8v12" }),
-          h("path", { d: "M4 4v16" }),
-        ],
-      );
-  },
-});
-const IconLocal = markRaw({
-  setup() {
-    return () =>
-      h(
-        "svg",
-        {
-          width: 14,
-          height: 14,
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          "stroke-width": 2,
-          "stroke-linecap": "round",
-          "stroke-linejoin": "round",
-        },
-        [
-          h("rect", { x: 2, y: 2, width: 20, height: 8, rx: 2 }),
-          h("rect", { x: 2, y: 14, width: 20, height: 8, rx: 2 }),
-          h("line", { x1: 6, y1: 6, x2: 6, y2: 6 }),
-          h("line", { x1: 6, y1: 18, x2: 6, y2: 18 }),
-        ],
-      );
-  },
-});
-const IconCloud = markRaw({
-  setup() {
-    return () =>
-      h(
-        "svg",
-        {
-          width: 14,
-          height: 14,
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          "stroke-width": 2,
-          "stroke-linecap": "round",
-          "stroke-linejoin": "round",
-        },
-        [h("path", { d: "M17.5 19a3.5 3.5 0 0 0 0-7h-1.5a7 7 0 1 0-11 6.5" })],
-      );
-  },
-});
-const IconEngine = markRaw({
-  setup() {
-    return () =>
-      h(
-        "svg",
-        {
-          width: 14,
-          height: 14,
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          "stroke-width": 2,
-          "stroke-linecap": "round",
-          "stroke-linejoin": "round",
-        },
-        [
-          h("path", { d: "M12 2v4" }),
-          h("path", { d: "M12 18v4" }),
-          h("path", { d: "M4.93 4.93l2.83 2.83" }),
-          h("path", { d: "M16.24 16.24l2.83 2.83" }),
-          h("path", { d: "M2 12h4" }),
-          h("path", { d: "M18 12h4" }),
-          h("path", { d: "M4.93 19.07l2.83-2.83" }),
-          h("path", { d: "M16.24 7.76l2.83-2.83" }),
-        ],
-      );
-  },
-});
 
 interface Tab {
   id: string;
@@ -926,17 +836,6 @@ watch(activeTab, (newTab) => {
   }
 });
 
-const LIBRARY_SIZES: Record<string, number> = {
-  "llama3.2:3b": 2.0,
-  "llama3.2:1b": 1.3,
-  "llama3.1:8b": 4.7,
-  "mistral:7b": 4.1,
-  "phi4:14b": 8.9,
-  "qwen2.5:7b": 4.7,
-  "deepseek-r1:7b": 4.7,
-  "nomic-embed-text": 0.274,
-};
-
 const recommendedModels = computed(() => {
   const avail = hardware.value?.vram_mb
     ? (hardware.value.vram_mb / 1024) * 0.9
@@ -986,14 +885,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
 .fade-slide-enter-active,
 .fade-slide-leave-active {
   transition: all 0.2s ease;

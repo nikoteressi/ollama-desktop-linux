@@ -181,10 +181,7 @@ mod tests {
                     || msg.contains("NoBackend")
                     || msg.contains("locked")
                     || msg.contains("Platform secure storage")
-                    || msg.contains("ServiceUnknown") =>
-            {
-                ()
-            }
+                    || msg.contains("ServiceUnknown") => {}
             Ok(Some(_)) => panic!("Token shouldn't exist"),
             Err(e) => panic!("Unexpected error: {:?}", e),
         }
@@ -202,10 +199,7 @@ mod tests {
                     || msg.contains("NoBackend")
                     || msg.contains("locked")
                     || msg.contains("Platform secure storage")
-                    || msg.contains("ServiceUnknown") =>
-            {
-                ()
-            }
+                    || msg.contains("ServiceUnknown") => {}
             Err(e) => panic!("Unexpected error: {:?}", e),
         }
     }

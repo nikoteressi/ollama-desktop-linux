@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { setActivePinia, createPinia } from "pinia";
 import SettingsPage from "./SettingsPage.vue";
+import PresetEditor from "../components/settings/PresetEditor.vue";
 import StopSequencesInput from "../components/settings/StopSequencesInput.vue";
 import { useSettingsStore } from "../stores/settings";
 
@@ -179,7 +180,7 @@ describe("SettingsPage — Engine Presets mirostat controls (S-08)", () => {
   });
 
   it("updateLocalMirostat(1) sets localMirostat to 1", async () => {
-    const wrapper = await mountPageOnEngine();
+    const wrapper = mount(PresetEditor);
     const vm = wrapper.vm as unknown as {
       localMirostat: number;
       updateLocalMirostat: (v: 0 | 1 | 2) => void;
@@ -192,7 +193,7 @@ describe("SettingsPage — Engine Presets mirostat controls (S-08)", () => {
   });
 
   it("updateLocalMirostat(2) sets localMirostat to 2", async () => {
-    const wrapper = await mountPageOnEngine();
+    const wrapper = mount(PresetEditor);
     const vm = wrapper.vm as unknown as {
       localMirostat: number;
       updateLocalMirostat: (v: 0 | 1 | 2) => void;
@@ -205,7 +206,7 @@ describe("SettingsPage — Engine Presets mirostat controls (S-08)", () => {
   });
 
   it("updateLocalMirostat(0) resets localMirostat to 0", async () => {
-    const wrapper = await mountPageOnEngine();
+    const wrapper = mount(PresetEditor);
     const vm = wrapper.vm as unknown as {
       localMirostat: number;
       updateLocalMirostat: (v: 0 | 1 | 2) => void;
@@ -220,7 +221,7 @@ describe("SettingsPage — Engine Presets mirostat controls (S-08)", () => {
   });
 
   it("localMirostat defaults to 0 when preset has no mirostat field", async () => {
-    const wrapper = await mountPageOnEngine();
+    const wrapper = mount(PresetEditor);
     const vm = wrapper.vm as unknown as { localMirostat: number };
     expect(vm.localMirostat).toBe(0);
   });

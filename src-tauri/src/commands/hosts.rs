@@ -6,7 +6,7 @@ use tokio::time::Instant;
 use crate::db::{
     self,
     hosts::{Host, NewHost, PingStatus},
-    DbConn,
+    spawn_db, DbConn,
 };
 use crate::error::AppError;
 use crate::state::AppState;
@@ -60,13 +60,7 @@ fn validate_host_url(url: &str) -> Result<(), AppError> {
 }
 
 pub async fn core_list_hosts(db: DbConn) -> Result<Vec<Host>, AppError> {
-    tokio::task::spawn_blocking(move || {
-        let conn = db
-            .lock()
-            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-        db::hosts::list_all(&conn)
-    })
-    .await?
+    spawn_db(db, db::hosts::list_all).await
 }
 
 #[tauri::command]
@@ -77,13 +71,7 @@ pub async fn list_hosts(state: State<'_, AppState>) -> Result<Vec<Host>, AppErro
 pub async fn core_add_host(db: DbConn, new_host: NewHost) -> Result<Host, AppError> {
     validate_host_url(&new_host.url)?;
 
-    tokio::task::spawn_blocking(move || {
-        let conn = db
-            .lock()
-            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-        db::hosts::create(&conn, new_host)
-    })
-    .await?
+    spawn_db(db, move |conn| db::hosts::create(conn, new_host)).await
 }
 
 #[tauri::command]
@@ -99,13 +87,7 @@ pub async fn core_update_host(
 ) -> Result<(), AppError> {
     validate_host_url(&url)?;
 
-    tokio::task::spawn_blocking(move || {
-        let conn = db
-            .lock()
-            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-        db::hosts::update(&conn, &id, &name, &url)
-    })
-    .await?
+    spawn_db(db, move |conn| db::hosts::update(conn, &id, &name, &url)).await
 }
 
 #[tauri::command]
@@ -119,13 +101,7 @@ pub async fn update_host(
 }
 
 pub async fn core_delete_host(db: DbConn, id: String) -> Result<(), AppError> {
-    tokio::task::spawn_blocking(move || {
-        let conn = db
-            .lock()
-            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-        db::hosts::delete(&conn, &id)
-    })
-    .await?
+    spawn_db(db, move |conn| db::hosts::delete(conn, &id)).await
 }
 
 #[tauri::command]
@@ -134,13 +110,7 @@ pub async fn delete_host(state: State<'_, AppState>, id: String) -> Result<(), A
 }
 
 pub async fn core_set_active_host(db: DbConn, id: String) -> Result<(), AppError> {
-    tokio::task::spawn_blocking(move || {
-        let conn = db
-            .lock()
-            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-        db::hosts::set_active(&conn, &id)
-    })
-    .await?
+    spawn_db(db, move |conn| db::hosts::set_active(conn, &id)).await
 }
 
 #[tauri::command]
@@ -171,31 +141,16 @@ pub async fn core_ping_host(
     http_client: reqwest::Client,
     id: String,
 ) -> Result<PingStatus, AppError> {
-    let host = tokio::task::spawn_blocking({
-        let db = db.clone();
-        let id = id.clone();
-        move || {
-            let conn = db
-                .lock()
-                .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-            db::hosts::get_by_id(&conn, &id)
-        }
-    })
-    .await??;
+    let host = spawn_db(db.clone(), move |conn| db::hosts::get_by_id(conn, &id)).await?;
 
     let (status, _latency) = perform_ping(&http_client, &host.url).await;
 
-    tokio::task::spawn_blocking({
-        let db = db.clone();
+    let id = host.id.clone();
+    spawn_db(db, {
         let status = status.clone();
-        move || {
-            let conn = db
-                .lock()
-                .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-            db::hosts::update_ping_status(&conn, &id, &status)
-        }
+        move |conn| db::hosts::update_ping_status(conn, &id, &status)
     })
-    .await??;
+    .await?;
 
     Ok(status)
 }
@@ -374,17 +329,18 @@ mod tests {
             .await;
 
         let db = setup_test_db();
-        let conn = db.lock().unwrap();
-        let host = crate::db::hosts::create(
-            &conn,
-            NewHost {
-                name: "Server".into(),
-                url: server.url(),
-                is_default: None,
-            },
-        )
-        .unwrap();
-        drop(conn);
+        let host = {
+            let conn = db.lock().unwrap();
+            crate::db::hosts::create(
+                &conn,
+                NewHost {
+                    name: "Server".into(),
+                    url: server.url(),
+                    is_default: None,
+                },
+            )
+            .unwrap()
+        };
 
         let http_client = reqwest::Client::new();
 

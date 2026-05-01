@@ -407,7 +407,7 @@ mod tests {
         let client = OllamaClient::new(req_client, server.url(), None);
 
         let app = tauri::test::mock_app();
-        let result = core_pull_model(&client, "llama3", &app.handle()).await;
+        let result = core_pull_model(&client, "llama3", app.handle()).await;
         mock.assert_async().await;
 
         assert!(result.is_ok());
@@ -432,7 +432,7 @@ not json at all
         let client = OllamaClient::new(req_client, server.url(), None);
 
         let app = tauri::test::mock_app();
-        let result = core_pull_model(&client, "llama3", &app.handle()).await;
+        let result = core_pull_model(&client, "llama3", app.handle()).await;
         mock.assert_async().await;
 
         // Function should continue and succeed even if one line is bad
@@ -452,7 +452,7 @@ not json at all
         let client = OllamaClient::new(req_client, server.url(), None);
 
         let app = tauri::test::mock_app();
-        let result = core_pull_model(&client, "llama3", &app.handle()).await;
+        let result = core_pull_model(&client, "llama3", app.handle()).await;
         mock.assert_async().await;
 
         assert!(result.is_err());

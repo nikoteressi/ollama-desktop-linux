@@ -1,12 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { open } from "@tauri-apps/plugin-dialog";
 import { tauriApi } from "../../lib/tauri";
-import {
-  useChatStore,
-  base64ToUint8Array,
-  uint8ArrayToBase64,
-} from "../../stores/chat";
+import { useChatStore } from "../../stores/chat";
 import { useModelStore } from "../../stores/models";
 import { useSettingsStore } from "../../stores/settings";
 import { useDraftManager } from "../../composables/useDraftManager";
@@ -14,6 +10,7 @@ import { useConversationLifecycle } from "../../composables/useConversationLifec
 import { useContextWindow } from "../../composables/useContextWindow";
 import { useAttachments } from "../../composables/useAttachments";
 import { useModelDefaults } from "../../composables/useModelDefaults";
+import { useDraftSync } from "../../composables/useDraftSync";
 import type { ChatOptions } from "../../types/settings";
 
 // Components
@@ -24,6 +21,7 @@ import ContextBar from "./input/ContextBar.vue";
 import ContextPill from "./input/ContextPill.vue";
 import AdvancedChatOptions from "./input/AdvancedChatOptions.vue";
 import CustomTooltip from "../shared/CustomTooltip.vue";
+import AttachMenu from "./input/AttachMenu.vue";
 
 const props = defineProps<{
   isStreaming: boolean;
@@ -44,7 +42,7 @@ const emit = defineEmits<{
 const chatStore = useChatStore();
 const modelStore = useModelStore();
 const settingsStore = useSettingsStore();
-const { persistDraft, setDraft, clearDraft } = useDraftManager();
+const { persistDraft } = useDraftManager();
 const { updateSystemPrompt } = useConversationLifecycle();
 const { applyModelDefaults } = useModelDefaults();
 
@@ -278,7 +276,6 @@ const isCompacting = ref(false);
 
 // ---- Text input ----
 const inputContent = ref("");
-const isSyncingDraft = ref(false);
 
 // ---- Image attachment previews ----
 const {
@@ -308,41 +305,6 @@ const { maxContext, contextTokens, isContextNearFull } = useContextWindow({
 
 // ---- Drag and drop & Paste ----
 // Provided by useAttachments composable
-
-const imageInput = ref<HTMLInputElement | null>(null);
-const isAttachMenuOpen = ref(false);
-const attachMenuRef = ref<HTMLElement | null>(null);
-
-function triggerImageUpload() {
-  isAttachMenuOpen.value = false;
-  imageInput.value?.click();
-}
-
-async function onImageInputChange(e: Event) {
-  const files = (e.target as HTMLInputElement).files;
-  if (files) await handleFiles(files);
-  if (imageInput.value) imageInput.value.value = "";
-}
-
-function toggleAttachMenu() {
-  isAttachMenuOpen.value = !isAttachMenuOpen.value;
-}
-
-function closeAttachMenu(e: MouseEvent) {
-  if (isAttachMenuOpen.value && attachMenuRef.value) {
-    if (!attachMenuRef.value.contains(e.target as Node)) {
-      isAttachMenuOpen.value = false;
-    }
-  }
-}
-
-onMounted(() => {
-  document.addEventListener("mousedown", closeAttachMenu);
-});
-
-onUnmounted(() => {
-  document.removeEventListener("mousedown", closeAttachMenu);
-});
 
 // ---- Submit ----
 function handleEnter(e: KeyboardEvent) {
@@ -409,157 +371,30 @@ async function handleCompact() {
   }
 }
 
-// ---- Draft Sync Logic ----
-
-function applyDraft(
-  draft: (typeof chatStore.drafts)[string],
-  convIdAtLoad: string,
-) {
-  inputContent.value = draft.content;
-  webSearchEnabled.value = draft.webSearchEnabled;
-  thinkEnabled.value = draft.thinkEnabled;
-  thinkLevel.value = draft.thinkLevel;
-  chatOptions.value = draft.chatOptions || {};
-  presetId.value = draft.presetId ?? "";
-  clearAttachments();
-  attachments.value = draft.attachments.map((a) => {
-    const data = base64ToUint8Array(a.data);
-    const blob = new Blob([data], { type: a.type });
-    return {
-      file: new File([blob], a.name, { type: a.type }),
-      previewUrl: URL.createObjectURL(blob),
-      data,
-    };
-  });
-  if (draft.linkedContexts) {
-    chatStore.folderContexts[convIdAtLoad] = draft.linkedContexts;
-  }
-}
-
-async function applyNoDraftSettings(convIdAtLoad: string) {
-  inputContent.value = "";
-  clearAttachments();
-  webSearchEnabled.value = false;
-  thinkEnabled.value = false;
-  thinkLevel.value = "medium";
-  const conv = chatStore.conversations.find((c) => c.id === convIdAtLoad);
-  const savedSettings = conv?.settings_json
-    ? parseChatOptionsJson(conv.settings_json)
-    : null;
-  if (savedSettings && Object.keys(savedSettings).length > 0) {
-    chatOptions.value = savedSettings;
-    presetId.value = "";
-    return;
-  }
-  // No saved settings — apply model defaults so per-model options (e.g. mirostat)
-  // survive across conversation switches even when the model name hasn't changed.
-  const modelName = activeModelName.value;
-  if (!modelName || modelName === "Select model") {
-    resetChatOptions();
-    return;
-  }
-  try {
-    const defaults = await applyModelDefaults(modelName);
-    if (activeConvId.value !== convIdAtLoad) return;
-    if (Object.keys(defaults).length > 0) {
-      chatOptions.value = defaults;
-      presetId.value = "";
-    } else {
-      resetChatOptions();
-    }
-  } catch {
-    resetChatOptions();
-  }
-}
-
-async function loadDraft() {
-  if (!activeConvId.value) return;
-  const convIdAtLoad = activeConvId.value;
-  isSyncingDraft.value = true;
-  const draft = chatStore.drafts[convIdAtLoad];
-  if (draft) {
-    applyDraft(draft, convIdAtLoad);
-  } else {
-    await applyNoDraftSettings(convIdAtLoad);
-  }
-  nextTick(() => {
-    isSyncingDraft.value = false;
-  });
-}
-
-function saveDraft() {
-  if (!activeConvId.value || isSyncingDraft.value) return;
-
-  const draftAttachments = attachments.value
-    .filter((a) => a.data)
-    .map((a) => ({
-      name: a.file.name,
-      type: a.file.type,
-      data: uint8ArrayToBase64(a.data!),
-    }));
-
-  setDraft(activeConvId.value, {
-    content: inputContent.value,
-    attachments: draftAttachments,
-    linkedContexts: linkedContexts.value,
-    webSearchEnabled: webSearchEnabled.value,
-    thinkEnabled: thinkEnabled.value,
-    thinkLevel: thinkLevel.value,
-    chatOptions: chatOptions.value,
-    presetId: presetId.value,
-  });
-}
-
-// Debounced draft save to avoid writing on every keystroke
-let draftSaveTimer: ReturnType<typeof setTimeout> | null = null;
-
-function debouncedSaveDraft() {
-  if (draftSaveTimer) clearTimeout(draftSaveTimer);
-  draftSaveTimer = setTimeout(() => {
-    saveDraft();
-    draftSaveTimer = null;
-  }, 500);
-}
-
-// Watchers for auto-saving (debounced)
-watch(
-  [
+// ---- Draft Sync ----
+const { clearDraft } = useDraftSync(
+  {
     inputContent,
     webSearchEnabled,
     thinkEnabled,
     thinkLevel,
     chatOptions,
     presetId,
-  ],
-  () => {
-    debouncedSaveDraft();
+    attachments,
   },
-  { deep: true },
-);
-
-// Deep watch for attachments and linkedContexts (debounced)
-watch(
-  [() => attachments.value.length, () => linkedContexts.value.length],
-  () => {
-    debouncedSaveDraft();
+  {
+    activeConvId,
+    activeModelName,
+    linkedContexts,
+    clearAttachments,
+    applyModelDefaults,
+    resetChatOptions,
+    parseChatOptionsJson,
   },
-);
-
-// Load draft on chat switch (NOT debounced — must be immediate and synchronous)
-watch(
-  activeConvId,
-  () => {
-    loadDraft();
-  },
-  { immediate: true },
 );
 
 onMounted(() => {
   modelStore.fetchModels();
-});
-
-onUnmounted(() => {
-  if (draftSaveTimer) clearTimeout(draftSaveTimer);
 });
 </script>
 
@@ -576,15 +411,6 @@ onUnmounted(() => {
       :isOpen="isSystemPromptOpen"
       @save="saveSystemPrompt"
       @cancel="cancelSystemPrompt"
-    />
-
-    <input
-      type="file"
-      ref="imageInput"
-      class="hidden"
-      accept="image/*"
-      multiple
-      @change="onImageInputChange"
     />
 
     <!-- Main input container -->
@@ -788,108 +614,13 @@ onUnmounted(() => {
             </button>
           </CustomTooltip>
 
-          <div class="relative" ref="attachMenuRef">
-            <CustomTooltip text="Attach" wrapper-class="block">
-              <button
-                @click="toggleAttachMenu"
-                :disabled="isStreaming"
-                class="w-7 h-7 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-strong)] flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--bg-active)] hover:text-[var(--text)] transition-colors cursor-pointer disabled:opacity-40"
-                :class="{
-                  'text-[var(--text)] bg-[var(--bg-active)]': isAttachMenuOpen,
-                }"
-                aria-label="Attach"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-              </button>
-            </CustomTooltip>
-
-            <!-- Attachment Menu -->
-            <transition name="pop-up">
-              <div
-                v-if="isAttachMenuOpen"
-                class="absolute bottom-full left-0 mb-3 z-50 w-44 bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-xl shadow-2xl py-1 overflow-hidden"
-              >
-                <button
-                  @click="triggerImageUpload"
-                  class="w-full flex items-center gap-2.5 px-3 py-2 text-[12px] text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer border-none bg-transparent"
-                >
-                  <svg
-                    class="w-3.5 h-3.5 opacity-70"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <polyline points="21 15 16 10 5 21" />
-                  </svg>
-                  Attach Images
-                </button>
-                <button
-                  @click="
-                    pickContext(false);
-                    isAttachMenuOpen = false;
-                  "
-                  :disabled="isLinking"
-                  class="w-full flex items-center gap-2.5 px-3 py-2 text-[12px] text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer border-none bg-transparent disabled:opacity-50"
-                >
-                  <svg
-                    class="w-3.5 h-3.5 opacity-70"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path
-                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                    />
-                    <polyline points="14 2 14 8 20 8" />
-                  </svg>
-                  Link File Context
-                </button>
-                <button
-                  @click="
-                    pickContext(true);
-                    isAttachMenuOpen = false;
-                  "
-                  :disabled="isLinking"
-                  class="w-full flex items-center gap-2.5 px-3 py-2 text-[12px] text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer border-none bg-transparent disabled:opacity-50"
-                >
-                  <svg
-                    class="w-3.5 h-3.5 opacity-70"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path
-                      d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
-                    />
-                  </svg>
-                  Link Folder Context
-                </button>
-              </div>
-            </transition>
-          </div>
+          <AttachMenu
+            :disabled="isStreaming"
+            :is-linking="isLinking"
+            @files="handleFiles($event)"
+            @pick-file="pickContext(false)"
+            @pick-folder="pickContext(true)"
+          />
           <!-- Web Search Toggle -->
           <CustomTooltip
             v-if="settingsStore.cloud && modelSupportsTools"

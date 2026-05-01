@@ -1,162 +1,10 @@
 use crate::auth::keyring;
 use crate::auth::keyring::API_KEY_ACCOUNT;
+use crate::db::DbConn;
 use crate::error::AppError;
-use std::path::PathBuf;
 use tauri::command;
 
-/// Returns the path to the Ollama ed25519 private key used for cloud auth.
-fn ollama_key_path() -> PathBuf {
-    PathBuf::from(std::env::var("HOME").unwrap_or_default())
-        .join(".ollama")
-        .join("id_ed25519")
-}
-
-#[command]
-pub async fn login(host_id: String, token: String) -> Result<(), AppError> {
-    tokio::task::spawn_blocking(move || keyring::set_token(&host_id, &token)).await??;
-    Ok(())
-}
-
-#[command]
-pub async fn logout(host_id: String) -> Result<(), AppError> {
-    // 1. Clear the Ollama CLI session if possible
-    let _ = tokio::task::spawn_blocking(|| {
-        std::process::Command::new("ollama")
-            .arg("signout")
-            .stdin(std::process::Stdio::null())
-            .output()
-    })
-    .await;
-
-    // 2. Delete our own keyring token
-    tokio::task::spawn_blocking(move || keyring::delete_token(&host_id)).await??;
-    Ok(())
-}
-
-/// Returns true if the Ollama ed25519 key file exists, indicating the user
-/// has signed in via `ollama signin`.
-#[command]
-pub async fn check_ollama_signed_in() -> Result<bool, AppError> {
-    Ok(ollama_key_path().exists())
-}
-
-/// Returns true if the host has a valid auth credential.
-///
-/// This command performs an 'active probe': it first checks for local credentials
-/// (keyring or SSH key file), and then verifies them against the Ollama daemon's
-/// experimental API. If the daemon returns 401, we report as unauthenticated
-/// even if keys exist locally (handles expired sessions).
-#[command]
-pub async fn get_auth_status(
-    state: tauri::State<'_, crate::state::AppState>,
-    host_id: String,
-) -> Result<bool, AppError> {
-    perform_auth_status_check(&state.http_client, state.db.clone(), host_id).await
-}
-
-pub async fn perform_auth_status_check(
-    http_client: &reqwest::Client,
-    db: crate::db::DbConn,
-    host_id: String,
-) -> Result<bool, AppError> {
-    // 1. Get the host's URL from DB
-    let host_url = {
-        let db = db.clone();
-        let host_id_clone = host_id.clone();
-        tokio::task::spawn_blocking(move || {
-            let conn = db
-                .lock()
-                .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-            crate::db::hosts::get_by_id(&conn, &host_id_clone)
-        })
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))??
-        .url
-    };
-
-    // 2. Initial credential check (passive)
-    let token = tokio::task::spawn_blocking({
-        let host_id = host_id.clone();
-        move || keyring::get_token(&host_id)
-    })
-    .await??;
-
-    let has_local_creds = match token.as_deref() {
-        // Real API key present — authenticated.
-        Some(t) if t != "native-ssh-session" => true,
-
-        // Fake sentinel token from legacy SettingsPage flow: clean it up and
-        // fall through to the ed25519 check below.
-        Some(_) => {
-            let host_id_cleanup = host_id.clone();
-            let _ =
-                tokio::task::spawn_blocking(move || keyring::delete_token(&host_id_cleanup)).await;
-            ollama_key_path().exists()
-        }
-
-        // No keyring entry at all — check for the ed25519 key file.
-        None => ollama_key_path().exists(),
-    };
-
-    if !has_local_creds {
-        return Ok(false);
-    }
-
-    // 3. Active Probe: Verify if the daemon itself is signed in.
-    // This catches cases where the daemon session has expired but keys remain on disk.
-    let probe_url = format!(
-        "{}/api/experimental/web_search",
-        host_url.trim_end_matches('/')
-    );
-    let resp = http_client
-        .post(&probe_url)
-        .header("User-Agent", "OllamaDesktop-AuthProbe/0.1.0")
-        .json(&serde_json::json!({ "query": "auth_probe" }))
-        .timeout(std::time::Duration::from_millis(1500))
-        .send()
-        .await;
-
-    match resp {
-        // Definitively logged out.
-        Ok(r) if r.status() == 401 => Ok(false),
-        // Otherwise, trust the local credentials (could be offline or 404 on old builds)
-        _ => Ok(true),
-    }
-}
-
-#[command]
-pub async fn trigger_ollama_signin() -> Result<String, AppError> {
-    let output = tokio::task::spawn_blocking(|| {
-        std::process::Command::new("ollama")
-            .arg("signin")
-            .stdin(std::process::Stdio::null())
-            .output()
-    })
-    .await
-    .map_err(|e| AppError::Internal(format!("Failed to spawn task: {}", e)))?
-    .map_err(|e| AppError::Internal(format!("Failed to execute ollama signin: {}", e)))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let full_output = format!("{}\n{}", stdout, stderr);
-
-    // Look for the https://ollama.com/connect... URL in the output
-    for line in full_output.lines() {
-        let line = line.trim();
-        if line.starts_with("https://ollama.com/connect") {
-            return Ok(line.to_string());
-        }
-    }
-
-    if full_output.contains("already signed in") {
-        return Ok("ALREADY_SIGNED_IN".to_string());
-    }
-
-    Err(AppError::Auth(
-        "Could not extract connect URL from ollama signin. Ensure Ollama is installed and updated."
-            .to_string(),
-    ))
-}
+use super::fetch_host_url;
 
 /// Core logic for storing the API key, without side-effects.
 /// Extracted so tests can call it without a live Tauri `AppState`.
@@ -176,7 +24,7 @@ pub async fn core_set_api_key(key: String) -> Result<(), AppError> {
 
 /// Adds `https://api.ollama.com` as a host entry if no cloud host exists yet.
 /// Best-effort — errors are ignored so a keyring failure never blocks key storage.
-pub async fn ensure_cloud_host_exists(db: crate::db::DbConn) -> Result<(), AppError> {
+pub async fn ensure_cloud_host_exists(db: DbConn) -> Result<(), AppError> {
     tokio::task::spawn_blocking(move || {
         let conn = db
             .lock()
@@ -228,7 +76,7 @@ pub async fn core_delete_api_key() -> Result<(), AppError> {
 }
 
 /// Removes all host entries whose URL matches the cloud host pattern.
-pub async fn remove_cloud_hosts(db: crate::db::DbConn) -> Result<(), AppError> {
+pub async fn remove_cloud_hosts(db: DbConn) -> Result<(), AppError> {
     tokio::task::spawn_blocking(move || {
         let conn = db
             .lock()
@@ -263,22 +111,10 @@ pub async fn delete_api_key(
 /// show "valid/invalid" status after the user enters a key.
 pub async fn perform_validate_api_key(
     http_client: &reqwest::Client,
-    db: crate::db::DbConn,
+    db: DbConn,
     host_id: String,
 ) -> Result<bool, AppError> {
-    let host_url = {
-        let db = db.clone();
-        let hid = host_id.clone();
-        tokio::task::spawn_blocking(move || {
-            let conn = db
-                .lock()
-                .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-            crate::db::hosts::get_by_id(&conn, &hid)
-        })
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))??
-        .url
-    };
+    let host_url = fetch_host_url(db, host_id.clone()).await?;
 
     let key = tokio::task::spawn_blocking(|| keyring::get_token(API_KEY_ACCOUNT)).await??;
     let key = match key {
@@ -324,77 +160,13 @@ mod tests {
     /// `cargo test` runs tests in the same binary in parallel by default, so
     /// `test_api_key_command_lifecycle` and `test_delete_api_key_is_idempotent`
     /// would otherwise race on the same keyring slot.
-    static API_KEY_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    static API_KEY_TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
-    #[test]
-    fn test_ollama_key_path_structure() {
-        let path = ollama_key_path();
-        // Path must end with .ollama/id_ed25519 regardless of HOME value.
-        assert!(path.to_string_lossy().ends_with(".ollama/id_ed25519"));
-    }
-
-    #[tokio::test]
-    async fn test_check_ollama_signed_in_returns_bool() {
-        // We can't guarantee the key exists in CI, but the command must not panic.
-        let result = check_ollama_signed_in().await;
-        assert!(result.is_ok());
-    }
-
-    async fn create_test_state() -> (reqwest::Client, DbConn) {
+    fn create_test_state() -> (reqwest::Client, DbConn) {
         let conn = Connection::open_in_memory().unwrap();
-        // Skip encryption for in-memory tests but run migrations
         migrations::run(&conn).expect("Tests failed to run migrations");
         seed_default_host(&conn).expect("Tests failed to seed");
         (reqwest::Client::new(), Arc::new(Mutex::new(conn)))
-    }
-
-    #[tokio::test]
-    async fn test_auth_commands_flow() {
-        let (client, db) = create_test_state().await;
-        let host_id = {
-            let conn = db.lock().unwrap();
-            let hosts = crate::db::hosts::list_all(&conn).unwrap();
-            hosts[0].id.clone()
-        };
-        let token = "test_token_commands".to_string();
-
-        let initial_status = perform_auth_status_check(&client, db.clone(), host_id.clone()).await;
-        if let Err(AppError::Auth(ref msg)) = initial_status {
-            if msg.contains("No secret-service")
-                || msg.contains("NoBackend")
-                || msg.contains("locked")
-                || msg.contains("Platform secure storage")
-                || msg.contains("ServiceUnknown")
-            {
-                return; // Gracefully pass in headless environments without mocked DBus
-            }
-        }
-        // Initial status may be true if the ed25519 key exists on this machine;
-        // that is valid — we only assert the command succeeds.
-        assert!(initial_status.is_ok());
-
-        // Login (Set token)
-        let login_res = login(host_id.clone(), token.clone()).await;
-        assert!(login_res.is_ok());
-
-        // Verify status after login
-        let status_after_login =
-            perform_auth_status_check(&client, db.clone(), host_id.clone()).await;
-        // In CI this might be false due to no real network/daemon, or true if fallback works.
-        // We just assert it doesn't panic.
-        assert!(status_after_login.is_ok());
-
-        // Logout (Delete token)
-        let logout_res = logout(host_id.clone()).await;
-        assert!(logout_res.is_ok());
-
-        // After logout the result depends on whether id_ed25519 exists — both
-        // true and false are valid; just assert no error.
-        assert!(
-            perform_auth_status_check(&client, db.clone(), host_id.clone())
-                .await
-                .is_ok()
-        );
     }
 
     #[tokio::test]
@@ -421,7 +193,7 @@ mod tests {
         // Serialize with test_delete_api_key_is_idempotent — both mutate the
         // same API_KEY_ACCOUNT keyring slot and would race under parallel test
         // execution without this guard.
-        let _lock = API_KEY_TEST_LOCK.lock().unwrap();
+        let _lock = API_KEY_TEST_LOCK.lock().await;
 
         let set_res = core_set_api_key("sk-test-cmd-key-abc".to_string()).await;
         if let Err(ref e) = set_res {
@@ -457,7 +229,7 @@ mod tests {
     async fn test_delete_api_key_is_idempotent() {
         // Serialize with test_api_key_command_lifecycle — both mutate the same
         // API_KEY_ACCOUNT keyring slot and would race under parallel test execution.
-        let _lock = API_KEY_TEST_LOCK.lock().unwrap();
+        let _lock = API_KEY_TEST_LOCK.lock().await;
 
         // delete_api_key must not error even when no key is present.
         // Call twice: first clears any existing entry, second proves idempotency.
@@ -494,7 +266,7 @@ mod tests {
         // returns a valid result. The keyring (API_KEY_ACCOUNT) is shared with
         // other concurrently-running tests, so we cannot assert a specific Ok(true/false)
         // value — we only assert the function does not return an unexpected error type.
-        let (client, db) = create_test_state().await;
+        let (client, db) = create_test_state();
         let host_id = {
             let conn = db.lock().unwrap();
             let hosts = crate::db::hosts::list_all(&conn).unwrap();
@@ -635,50 +407,5 @@ mod tests {
             .filter(|h| crate::ollama::client::is_cloud_host(&h.url))
             .count();
         assert_eq!(cloud_count, 0);
-    }
-
-    #[tokio::test]
-    async fn test_get_auth_status_cleans_fake_sentinel() {
-        let (client, db) = create_test_state().await;
-        let host_id = {
-            let conn = db.lock().unwrap();
-            let hosts = crate::db::hosts::list_all(&conn).unwrap();
-            hosts[0].id.clone()
-        };
-
-        // Plant the legacy fake token.
-        let plant = login(host_id.clone(), "native-ssh-session".to_string()).await;
-        if let Err(AppError::Auth(ref msg)) = plant {
-            if msg.contains("No secret-service")
-                || msg.contains("NoBackend")
-                || msg.contains("locked")
-                || msg.contains("Platform secure storage")
-                || msg.contains("ServiceUnknown")
-            {
-                return; // No keyring in this environment — skip.
-            }
-        }
-        assert!(plant.is_ok());
-
-        // perform_auth_status_check should delete the sentinel and return a bool (no error).
-        let status = perform_auth_status_check(&client, db.clone(), host_id.clone()).await;
-        assert!(status.is_ok());
-
-        // The keyring entry must have been deleted.
-        let remaining = tokio::task::spawn_blocking(move || keyring::get_token(&host_id))
-            .await
-            .unwrap();
-        match remaining {
-            Ok(None) => (),
-            Ok(Some(t)) => panic!("Sentinel token was not cleaned up, found: {}", t),
-            Err(AppError::Auth(ref msg))
-                if msg.contains("No secret-service")
-                    || msg.contains("NoBackend")
-                    || msg.contains("locked")
-                    || msg.contains("Platform secure storage")
-                    || msg.contains("ServiceUnknown")
-                    || msg.contains("org.freedesktop") => {}
-            Err(e) => panic!("Unexpected keyring error: {:?}", e),
-        }
     }
 }

@@ -189,15 +189,15 @@
       </div>
     </Teleport>
 
-    <!-- Custom Confirmation Modal -->
+    <!-- Confirmation Modal -->
     <ConfirmationModal
-      :show="showDeleteModal"
-      title="Confirm Delete"
-      :message="`Delete '${convToDelete?.title}'? This cannot be undone.`"
-      confirm-label="Delete"
-      kind="danger"
-      @confirm="onConfirmDelete"
-      @cancel="showDeleteModal = false"
+      :show="modal.show"
+      :title="modal.title"
+      :message="modal.message"
+      :confirm-label="modal.confirmLabel"
+      :kind="modal.kind"
+      @confirm="onConfirm"
+      @cancel="onCancel"
     />
   </div>
 </template>
@@ -210,6 +210,7 @@ import ConfirmationModal from "../shared/ConfirmationModal.vue";
 import CustomTooltip from "../shared/CustomTooltip.vue";
 import { useChatStore } from "../../stores/chat";
 import { useConversationLifecycle } from "../../composables/useConversationLifecycle";
+import { useConfirmationModal } from "../../composables/useConfirmationModal";
 import type { Conversation } from "../../types/chat";
 
 interface ScrollerItem {
@@ -230,6 +231,7 @@ const props = defineProps<{
 const chatStore = useChatStore();
 const { updateTitle, setPinned, deleteConversation } =
   useConversationLifecycle();
+const { modal, openModal, onConfirm, onCancel } = useConfirmationModal();
 
 const unpinnedConversations = computed(() => {
   const base = props.filterIds
@@ -326,10 +328,6 @@ const menuOpenId = ref<string | null>(null);
 const menuPosition = ref<{ x: number; y: number } | null>(null);
 const menuRef = ref<HTMLElement | null>(null);
 
-// Modal state
-const showDeleteModal = ref(false);
-const convToDelete = ref<Conversation | null>(null);
-
 let observer: IntersectionObserver | null = null;
 
 /** The conversation object for the currently open menu */
@@ -414,17 +412,15 @@ async function doTogglePin() {
 
 function doDelete() {
   if (!menuConv.value) return;
-  convToDelete.value = menuConv.value;
-  showDeleteModal.value = true;
+  const conv = menuConv.value;
   closeMenuNow();
-}
-
-async function onConfirmDelete() {
-  if (convToDelete.value) {
-    await deleteConversation(convToDelete.value.id);
-    showDeleteModal.value = false;
-    convToDelete.value = null;
-  }
+  openModal({
+    title: "Confirm Delete",
+    message: `Delete '${conv.title}'? This cannot be undone.`,
+    confirmLabel: "Delete",
+    kind: "danger",
+    onConfirm: () => deleteConversation(conv.id),
+  });
 }
 
 function closeMenu(e: MouseEvent) {

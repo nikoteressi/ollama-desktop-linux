@@ -285,9 +285,8 @@ pub fn export_to_path(
         "messages": msgs,
     });
 
-    let json_str = serde_json::to_string_pretty(&export_data)
-        .map_err(|e| AppError::Serialization(e.to_string()))?;
-    std::fs::write(path, json_str).map_err(|e| AppError::Io(e.to_string()))?;
+    let json_str = serde_json::to_string_pretty(&export_data)?;
+    std::fs::write(path, json_str)?;
     Ok(())
 }
 

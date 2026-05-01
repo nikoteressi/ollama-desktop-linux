@@ -38,7 +38,7 @@ export function useConfirmationModal() {
       console.error("[ConfirmationModal] Confirm action failed:", error);
       // Still close the modal so the user isn't stuck
       modal.show = false;
-      throw error; // Let the caller handle the error (show toast, etc.)
+      throw error;
     }
   }
 

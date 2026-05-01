@@ -37,25 +37,26 @@
       </button>
 
       <!-- New Chat button -->
-      <button
-        v-if="!sidebarOpen"
-        @click="newChat"
-        class="w-8 h-8 rounded-md border-none bg-transparent flex items-center justify-center cursor-pointer transition-colors icon-btn"
-        title="New Chat"
-      >
-        <svg
-          width="15"
-          height="15"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+      <CustomTooltip text="New Chat" wrapper-class="inline-flex">
+        <button
+          v-if="!sidebarOpen"
+          @click="newChat"
+          class="w-8 h-8 rounded-md border-none bg-transparent flex items-center justify-center cursor-pointer transition-colors icon-btn"
         >
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-      </button>
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+      </CustomTooltip>
     </div>
 
     <!-- Collapsible sidebar -->
@@ -118,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, markRaw, h, watch, computed } from "vue";
+import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { tauriApi } from "./lib/tauri";
 import ConversationList from "./components/sidebar/ConversationList.vue";
@@ -130,6 +131,12 @@ import { useSettingsStore } from "./stores/settings";
 import { useAuthStore } from "./stores/auth";
 import { useAppOrchestration } from "./composables/useAppOrchestration";
 import { useStreamingEvents } from "./composables/useStreamingEvents";
+import {
+  IconNewChat,
+  IconLaunch,
+  IconModels,
+  IconSettings,
+} from "./components/shared/icons";
 
 const route = useRoute();
 const router = useRouter();
@@ -198,104 +205,6 @@ function stopResize() {
 onUnmounted(() => {
   window.removeEventListener("mousemove", doResize);
   window.removeEventListener("mouseup", stopResize);
-});
-
-// ---- Inline SVG icon components ----
-
-const IconNewChat = markRaw({
-  setup() {
-    return () =>
-      h(
-        "svg",
-        {
-          width: 16,
-          height: 16,
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          "stroke-width": 2.5,
-          "stroke-linecap": "round",
-          "stroke-linejoin": "round",
-        },
-        [h("path", { d: "M12 5v14M5 12h14" })],
-      );
-  },
-});
-
-const IconLaunch = markRaw({
-  setup() {
-    return () =>
-      h(
-        "svg",
-        {
-          width: 16,
-          height: 16,
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          "stroke-width": 2,
-          "stroke-linecap": "round",
-          "stroke-linejoin": "round",
-        },
-        [
-          h("path", {
-            d: "M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z",
-          }),
-          h("path", {
-            d: "m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z",
-          }),
-        ],
-      );
-  },
-});
-
-const IconModels = markRaw({
-  setup() {
-    return () =>
-      h(
-        "svg",
-        {
-          width: 16,
-          height: 16,
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          "stroke-width": 2,
-          "stroke-linecap": "round",
-          "stroke-linejoin": "round",
-        },
-        [
-          h("path", {
-            d: "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z",
-          }),
-        ],
-      );
-  },
-});
-
-const IconSettings = markRaw({
-  setup() {
-    return () =>
-      h(
-        "svg",
-        {
-          width: 16,
-          height: 16,
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          "stroke-width": 2,
-          "stroke-linecap": "round",
-          "stroke-linejoin": "round",
-        },
-        [
-          h("circle", { cx: 12, cy: 12, r: 3 }),
-          h("path", {
-            d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
-          }),
-        ],
-      );
-  },
 });
 
 interface NavItem {

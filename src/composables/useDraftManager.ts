@@ -1,8 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useChatStore } from "../stores/chat";
 import type { Conversation, ChatDraft } from "../types/chat";
-
-const DRAFT_ID_PREFIX = "__draft__";
+import { DRAFT_ID_PREFIX } from "../lib/constants";
 
 function makeDraftConversation(model: string): Conversation {
   return {

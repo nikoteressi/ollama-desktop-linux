@@ -95,27 +95,28 @@
             >
               Connect
             </button>
-            <button
-              @click="confirmDelete(host.id, host.is_active)"
-              class="text-[var(--text-dim)] hover:text-[var(--danger)] transition-colors cursor-pointer p-1"
-              title="Delete host"
-            >
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+            <CustomTooltip text="Delete host" wrapper-class="inline-block">
+              <button
+                @click="confirmDelete(host.id, host.is_active)"
+                class="text-[var(--text-dim)] hover:text-[var(--danger)] transition-colors cursor-pointer p-1"
               >
-                <polyline points="3 6 5 6 21 6" />
-                <path
-                  d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
-                />
-              </svg>
-            </button>
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path
+                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+                  />
+                </svg>
+              </button>
+            </CustomTooltip>
           </div>
         </div>
       </div>
@@ -165,6 +166,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import CustomTooltip from "../shared/CustomTooltip.vue";
 import { useHostStore } from "../../stores/hosts";
 import { useAppOrchestration } from "../../composables/useAppOrchestration";
 import { useConfirmationModal } from "../../composables/useConfirmationModal";

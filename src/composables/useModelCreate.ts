@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useModelStore } from "../stores/models";
+import { extractErrorMessage } from "../lib/tauri";
 
 async function cancel(name: string): Promise<void> {
   await invoke("cancel_model_create", { name });
@@ -22,8 +23,7 @@ export function useModelCreate() {
       // invoke() rejected before the backend could emit model:create-error — mark as error
       if (modelStore.creating[name]?.phase === "running") {
         modelStore.creating[name].phase = "error";
-        modelStore.creating[name].error =
-          e instanceof Error ? e.message : String(e);
+        modelStore.creating[name].error = extractErrorMessage(e);
       }
       throw e;
     }

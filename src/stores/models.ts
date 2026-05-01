@@ -29,6 +29,7 @@ export function modelMatchesTag(
 }
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { extractErrorMessage } from "../lib/tauri";
 import type {
   Model,
   PullProgressPayload,
@@ -218,7 +219,7 @@ export const useModelStore = defineStore("models", {
           delete this.capabilities[name];
         }
       } catch (e: unknown) {
-        const errorMsg = e instanceof Error ? e.message : String(e);
+        const errorMsg = extractErrorMessage(e);
         this.error = errorMsg;
         throw new Error(`Failed to delete model "${name}": ${errorMsg}`);
       }
@@ -229,7 +230,7 @@ export const useModelStore = defineStore("models", {
       try {
         await invoke("pull_model", { name });
       } catch (e: unknown) {
-        this.error = e instanceof Error ? e.message : String(e);
+        this.error = extractErrorMessage(e);
         delete this.pulling[name];
       }
     },

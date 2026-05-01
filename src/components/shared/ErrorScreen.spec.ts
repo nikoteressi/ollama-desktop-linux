@@ -70,7 +70,7 @@ describe("ErrorScreen", () => {
 
   it("copies install command when copy button is clicked", async () => {
     const wrapper = mount(ErrorScreen);
-    const copyBtn = wrapper.find("button[title='Copy to clipboard']");
+    const copyBtn = wrapper.find("[data-testid='copy-install-cmd']");
     expect(copyBtn.exists()).toBe(true);
     await copyBtn.trigger("click");
     expect(mockCopy).toHaveBeenCalledWith(

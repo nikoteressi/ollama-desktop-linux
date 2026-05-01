@@ -92,7 +92,7 @@ fn get_or_create_db_key() -> Result<String, AppError> {
     match entry.get_password() {
         Ok(key) => Ok(key),
         Err(keyring::Error::NoEntry) => {
-            let new_key = Uuid::new_v4().to_string().replace("-", "");
+            let new_key = Uuid::new_v4().to_string().replace('-', "");
             entry.set_password(&new_key)?;
             Ok(new_key)
         }
@@ -104,6 +104,30 @@ fn get_or_create_db_key() -> Result<String, AppError> {
 #[cfg(feature = "test-mode")]
 fn get_or_create_db_key() -> Result<String, AppError> {
     Ok("a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4".to_string())
+}
+
+/// Locks the DB connection and runs `f` with a reference to it.
+/// Returns `AppError::Db` if the lock is poisoned, otherwise propagates `f`'s result.
+pub fn with_db<T, F>(db: &DbConn, f: F) -> Result<T, AppError>
+where
+    F: FnOnce(&rusqlite::Connection) -> Result<T, AppError>,
+{
+    let conn = db
+        .lock()
+        .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
+    f(&conn)
+}
+
+/// Spawns a blocking task that locks `db` and runs `f`.
+/// Use this from async Tauri commands to avoid blocking the Tokio runtime.
+pub async fn spawn_db<T, F>(db: DbConn, f: F) -> Result<T, AppError>
+where
+    T: Send + 'static,
+    F: FnOnce(&rusqlite::Connection) -> Result<T, AppError> + Send + 'static,
+{
+    tokio::task::spawn_blocking(move || with_db(&db, f))
+        .await
+        .map_err(|e| AppError::Internal(format!("DB task panicked: {e}")))?
 }
 
 /// Low-level SQLite backup: copies all pages from `src` into `dst` using the SQLite Backup API.

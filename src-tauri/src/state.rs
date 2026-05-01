@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Mutex, RwLock};
 
 use tokio::sync::{broadcast, oneshot};
 
@@ -40,9 +40,9 @@ pub struct AppState {
     pub health_loop_handle: std::sync::Mutex<Option<tauri::async_runtime::JoinHandle<()>>>,
 
     /// Tracks if the user is currently on a chat-related page.
-    pub is_chat_view: Mutex<bool>,
+    pub is_chat_view: RwLock<bool>,
     /// Tracks the ID of the conversation currently visible to the user.
-    pub active_conversation_id: Mutex<Option<String>>,
+    pub active_conversation_id: RwLock<Option<String>>,
 }
 
 impl AppState {
@@ -60,8 +60,8 @@ impl AppState {
             model_create_cancel_tx: Mutex::new(HashMap::new()),
             health_loop_shutdown: Mutex::new(None),
             health_loop_handle: std::sync::Mutex::new(None),
-            is_chat_view: Mutex::new(true),
-            active_conversation_id: Mutex::new(None),
+            is_chat_view: RwLock::new(true),
+            active_conversation_id: RwLock::new(None),
         })
     }
 }

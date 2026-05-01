@@ -3,8 +3,7 @@ import { useChatStore } from "../stores/chat";
 import { useDraftManager } from "./useDraftManager";
 import { useConversationLifecycle } from "./useConversationLifecycle";
 import type { ChatOptions } from "../types/settings";
-
-const DRAFT_ID_PREFIX = "__draft__";
+import { DRAFT_ID_PREFIX } from "../lib/constants";
 
 export function useSendMessage() {
   const store = useChatStore();

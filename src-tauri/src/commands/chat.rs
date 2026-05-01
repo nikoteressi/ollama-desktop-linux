@@ -1,4 +1,4 @@
-use crate::db::{conversations, messages};
+use crate::db::{conversations, messages, spawn_db};
 use crate::error::AppError;
 use crate::ollama::types::ChatOptions;
 use crate::state::AppState;
@@ -12,14 +12,10 @@ pub async fn get_messages(
     state: State<'_, AppState>,
     conversation_id: String,
 ) -> Result<Vec<messages::Message>, AppError> {
-    let db = state.db.clone();
-    tokio::task::spawn_blocking(move || {
-        let conn = db
-            .lock()
-            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-        messages::list_for_conversation(&conn, &conversation_id)
+    spawn_db(state.db.clone(), move |conn| {
+        messages::list_for_conversation(conn, &conversation_id)
     })
-    .await?
+    .await
 }
 
 const MAX_TITLE_LEN: usize = 500;
@@ -50,13 +46,9 @@ pub async fn create_conversation(
             )));
         }
     }
-    let db = state.db.clone();
-    tokio::task::spawn_blocking(move || {
-        let conn = db
-            .lock()
-            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
+    spawn_db(state.db.clone(), move |conn| {
         let conv = conversations::create(
-            &conn,
+            conn,
             conversations::NewConversation {
                 title: title.unwrap_or_else(|| "New Chat".to_string()),
                 model,
@@ -65,15 +57,14 @@ pub async fn create_conversation(
             },
         )?;
 
-        // If a system prompt was provided, create the initial system message
         if let Some(prompt) = system_prompt {
             if !prompt.is_empty() {
-                conversations::update_system_prompt(&conn, &conv.id, &prompt)?;
+                conversations::update_system_prompt(conn, &conv.id, &prompt)?;
             }
         }
         Ok(conv)
     })
-    .await?
+    .await
 }
 
 #[tauri::command]
@@ -82,16 +73,12 @@ pub async fn list_conversations(
     limit: Option<usize>,
     offset: Option<usize>,
 ) -> Result<Vec<conversations::Conversation>, AppError> {
-    let db = state.db.clone();
     let l = limit.unwrap_or(20);
     let o = offset.unwrap_or(0);
-    tokio::task::spawn_blocking(move || {
-        let conn = db
-            .lock()
-            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-        conversations::list(&conn, l, o)
+    spawn_db(state.db.clone(), move |conn| {
+        conversations::list(conn, l, o)
     })
-    .await?
+    .await
 }
 
 #[tauri::command]
@@ -99,14 +86,10 @@ pub async fn delete_conversation(
     state: State<'_, AppState>,
     conversation_id: String,
 ) -> Result<(), AppError> {
-    let db = state.db.clone();
-    tokio::task::spawn_blocking(move || {
-        let conn = db
-            .lock()
-            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-        conversations::delete(&conn, &conversation_id)
+    spawn_db(state.db.clone(), move |conn| {
+        conversations::delete(conn, &conversation_id)
     })
-    .await?
+    .await
 }
 
 #[tauri::command]
@@ -115,14 +98,10 @@ pub async fn update_chat_draft(
     conversation_id: String,
     draft_json: Option<String>,
 ) -> Result<(), AppError> {
-    let db = state.db.clone();
-    tokio::task::spawn_blocking(move || {
-        let conn = db
-            .lock()
-            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-        conversations::update_draft(&conn, &conversation_id, draft_json.as_deref())
+    spawn_db(state.db.clone(), move |conn| {
+        conversations::update_draft(conn, &conversation_id, draft_json.as_deref())
     })
-    .await?
+    .await
 }
 
 #[tauri::command]
@@ -138,15 +117,10 @@ pub async fn update_conversation_title(
             MAX_TITLE_LEN
         )));
     }
-    let db = state.db.clone();
-    tokio::task::spawn_blocking(move || {
-        let conn = db
-            .lock()
-            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-        conversations::update_title(&conn, &conversation_id, &title)
+    spawn_db(state.db.clone(), move |conn| {
+        conversations::update_title(conn, &conversation_id, &title)
     })
     .await
-    .map_err(|e| AppError::Internal(format!("DB task panicked: {}", e)))?
 }
 
 #[tauri::command]
@@ -155,14 +129,10 @@ pub async fn update_conversation_model(
     conversation_id: String,
     model: String,
 ) -> Result<(), AppError> {
-    let db = state.db.clone();
-    tokio::task::spawn_blocking(move || {
-        let conn = db
-            .lock()
-            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-        conversations::update_model(&conn, &conversation_id, &model)
+    spawn_db(state.db.clone(), move |conn| {
+        conversations::update_model(conn, &conversation_id, &model)
     })
-    .await?
+    .await
 }
 
 #[tauri::command]
@@ -172,16 +142,11 @@ pub async fn update_conversation_settings(
     settings: ChatOptions,
 ) -> Result<(), AppError> {
     super::model_settings::validate_chat_options(&settings)?;
-    let json =
-        serde_json::to_string(&settings).map_err(|e| AppError::Serialization(e.to_string()))?;
-    let db = state.db.clone();
-    tokio::task::spawn_blocking(move || {
-        let conn = db
-            .lock()
-            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-        conversations::update_settings(&conn, &conversation_id, &json)
+    let json = serde_json::to_string(&settings)?;
+    spawn_db(state.db.clone(), move |conn| {
+        conversations::update_settings(conn, &conversation_id, &json)
     })
-    .await?
+    .await
 }
 
 #[tauri::command]
@@ -190,14 +155,10 @@ pub async fn set_conversation_pinned(
     conversation_id: String,
     pinned: bool,
 ) -> Result<(), AppError> {
-    let db = state.db.clone();
-    tokio::task::spawn_blocking(move || {
-        let conn = db
-            .lock()
-            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-        conversations::set_pinned(&conn, &conversation_id, pinned)
+    spawn_db(state.db.clone(), move |conn| {
+        conversations::set_pinned(conn, &conversation_id, pinned)
     })
-    .await?
+    .await
 }
 
 #[tauri::command]
@@ -213,15 +174,10 @@ pub async fn update_system_prompt(
             MAX_SYSTEM_PROMPT_LEN
         )));
     }
-    let db = state.db.clone();
-    tokio::task::spawn_blocking(move || {
-        let conn = db
-            .lock()
-            .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-        conversations::update_system_prompt(&conn, &conversation_id, &system_prompt)
+    spawn_db(state.db.clone(), move |conn| {
+        conversations::update_system_prompt(conn, &conversation_id, &system_prompt)
     })
     .await
-    .map_err(|e| AppError::Internal(format!("DB task panicked: {}", e)))?
 }
 
 const MAX_IMAGE_SIZE_BYTES: usize = 20 * 1024 * 1024; // 20 MB per image
@@ -317,15 +273,10 @@ pub async fn export_conversation<R: Runtime>(
         let path = file_path
             .into_path()
             .map_err(|e| AppError::Io(e.to_string()))?;
-        let db = state.db.clone();
-        tokio::task::spawn_blocking(move || {
-            let conn = db
-                .lock()
-                .map_err(|_| AppError::Db("Database lock poisoned".into()))?;
-            conversations::export_to_path(&conn, &conversation_id, &path)
+        spawn_db(state.db.clone(), move |conn| {
+            conversations::export_to_path(conn, &conversation_id, &path)
         })
-        .await
-        .map_err(|e| AppError::Internal(format!("DB task panicked: {}", e)))??;
+        .await?;
     }
     Ok(())
 }
@@ -379,8 +330,7 @@ pub async fn backup_database<R: Runtime>(
             }
             res
         })
-        .await
-        .map_err(|e| AppError::Internal(format!("DB task panicked: {}", e)))??;
+        .await??;
 
         return Ok(Some(backup_path_str));
     }
@@ -426,8 +376,7 @@ pub async fn restore_database<R: Runtime>(
             }
             res
         })
-        .await
-        .map_err(|e| AppError::Internal(format!("DB task panicked: {}", e)))??;
+        .await??;
     }
     Ok(())
 }

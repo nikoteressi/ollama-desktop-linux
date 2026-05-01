@@ -451,14 +451,6 @@ function onReadmeClick(e: MouseEvent) {
 </script>
 
 <style scoped>
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
 .fade-subpage-enter-active,
 .fade-subpage-leave-active {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);

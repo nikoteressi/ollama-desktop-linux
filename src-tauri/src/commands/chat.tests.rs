@@ -1,4 +1,3 @@
-use super::*;
 use crate::db;
 use crate::db::conversations::NewConversation;
 use crate::db::messages::{MessageRole, NewMessage};

@@ -38,8 +38,20 @@ pub fn send_notification<R: Runtime>(
     // b) The user is already looking at the relevant content (active_view == chat && active_conv == relevant_id)
     if let Some(window) = app.get_webview_window("main") {
         if let Ok(true) = window.is_focused() {
-            let is_chat_view = *state.is_chat_view.lock().unwrap();
-            let current_conv = state.active_conversation_id.lock().unwrap();
+            let is_chat_view = state.is_chat_view.read().map(|g| *g).unwrap_or_else(|_| {
+                log::warn!(
+                    "is_chat_view RwLock poisoned; defaulting to false for notification skip check"
+                );
+                false
+            });
+            let current_conv = state
+                .active_conversation_id
+                .read()
+                .map(|g| g.clone())
+                .unwrap_or_else(|_| {
+                    log::warn!("active_conversation_id RwLock poisoned; defaulting to None for notification skip check");
+                    None
+                });
 
             let should_skip = match relevant_conversation_id {
                 Some(relevant_id) => is_chat_view && current_conv.as_deref() == Some(relevant_id),

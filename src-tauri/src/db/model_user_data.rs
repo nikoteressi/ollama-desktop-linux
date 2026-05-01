@@ -212,7 +212,7 @@ mod tests {
     fn test_list_all_multiple_rows() {
         let conn = in_memory_db();
         toggle_favorite(&conn, "model1:latest").unwrap();
-        set_tags(&conn, "model2:latest", &vec!["tag1".to_string()]).unwrap();
+        set_tags(&conn, "model2:latest", &["tag1".to_string()]).unwrap();
 
         let result = list_all(&conn).unwrap();
         assert_eq!(result.len(), 2);
@@ -260,12 +260,7 @@ mod tests {
         assert_eq!(is_favorite_before, 1);
 
         // Then set_tags
-        set_tags(
-            &conn,
-            model_name,
-            &vec!["tag1".to_string(), "tag2".to_string()],
-        )
-        .unwrap();
+        set_tags(&conn, model_name, &["tag1".to_string(), "tag2".to_string()]).unwrap();
 
         // Assert: is_favorite is still 1 after set_tags
         let is_favorite_after: i32 = conn
@@ -295,12 +290,7 @@ mod tests {
         let model_name = "test-model2:latest";
 
         // Setup: set_tags to ["code", "fast"]
-        set_tags(
-            &conn,
-            model_name,
-            &vec!["code".to_string(), "fast".to_string()],
-        )
-        .unwrap();
+        set_tags(&conn, model_name, &["code".to_string(), "fast".to_string()]).unwrap();
         let tags_json_before: String = conn
             .query_row(
                 "SELECT tags_json FROM model_user_data WHERE name = ?1",

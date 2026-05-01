@@ -9,6 +9,12 @@ import type {
 import type { SettingsState, ChatOptions } from "../types/settings";
 import type { FolderContextPayload } from "../types/chat";
 
+// ── Error utilities ───────────────────────────────────────────────────────────
+
+export function extractErrorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
 // ── Host types ────────────────────────────────────────────────────────────────
 
 export interface Host {

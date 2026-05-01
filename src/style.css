@@ -397,3 +397,12 @@ body {
 .themed-logo {
   transition: filter 0.2s ease;
 }
+
+/* ── SCROLLBAR UTILITIES ────────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

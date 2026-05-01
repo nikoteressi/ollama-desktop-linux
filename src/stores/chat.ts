@@ -9,8 +9,7 @@ import type {
   LinkedContext,
   FolderContextPayload,
 } from "../types/chat";
-
-const DRAFT_ID_PREFIX = "__draft__";
+import { DRAFT_ID_PREFIX } from "../lib/constants";
 
 export function base64ToUint8Array(base64: string) {
   const binaryString = atob(base64);

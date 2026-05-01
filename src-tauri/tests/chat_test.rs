@@ -178,14 +178,13 @@ async fn test_streaming_multi_chunk() {
     let url = server.url();
 
     // 5 content chunks + 1 final done chunk
-    let body = concat!(
-        "{\"model\":\"llama3\",\"created_at\":\"\",\"message\":{\"role\":\"assistant\",\"content\":\"chunk1\"},\"done\":false}\n",
-        "{\"model\":\"llama3\",\"created_at\":\"\",\"message\":{\"role\":\"assistant\",\"content\":\"chunk2\"},\"done\":false}\n",
-        "{\"model\":\"llama3\",\"created_at\":\"\",\"message\":{\"role\":\"assistant\",\"content\":\"chunk3\"},\"done\":false}\n",
-        "{\"model\":\"llama3\",\"created_at\":\"\",\"message\":{\"role\":\"assistant\",\"content\":\"chunk4\"},\"done\":false}\n",
-        "{\"model\":\"llama3\",\"created_at\":\"\",\"message\":{\"role\":\"assistant\",\"content\":\"chunk5\"},\"done\":false}\n",
-        "{\"model\":\"llama3\",\"created_at\":\"\",\"message\":{\"role\":\"assistant\",\"content\":\"\"},\"done\":true,\"total_duration\":1000,\"load_duration\":10,\"prompt_eval_count\":5,\"eval_count\":5,\"eval_duration\":1000}\n",
-    );
+    let body = "\
+        {\"model\":\"llama3\",\"created_at\":\"\",\"message\":{\"role\":\"assistant\",\"content\":\"chunk1\"},\"done\":false}\n\
+        {\"model\":\"llama3\",\"created_at\":\"\",\"message\":{\"role\":\"assistant\",\"content\":\"chunk2\"},\"done\":false}\n\
+        {\"model\":\"llama3\",\"created_at\":\"\",\"message\":{\"role\":\"assistant\",\"content\":\"chunk3\"},\"done\":false}\n\
+        {\"model\":\"llama3\",\"created_at\":\"\",\"message\":{\"role\":\"assistant\",\"content\":\"chunk4\"},\"done\":false}\n\
+        {\"model\":\"llama3\",\"created_at\":\"\",\"message\":{\"role\":\"assistant\",\"content\":\"chunk5\"},\"done\":false}\n\
+        {\"model\":\"llama3\",\"created_at\":\"\",\"message\":{\"role\":\"assistant\",\"content\":\"\"},\"done\":true,\"total_duration\":1000,\"load_duration\":10,\"prompt_eval_count\":5,\"eval_count\":5,\"eval_duration\":1000}\n";
 
     let _mock = server
         .mock("POST", "/api/chat")
@@ -245,10 +244,8 @@ async fn test_stop_generation_cancels_stream() {
 
     // Slow stream: first chunk arrives, then a delay simulated by chunked transfer
     // We send one content chunk and a final line that will never arrive (we cancel first)
-    let body = concat!(
-        "{\"model\":\"llama3\",\"created_at\":\"\",\"message\":{\"role\":\"assistant\",\"content\":\"token1\"},\"done\":false}\n",
-        // done:true line omitted — stream just ends without completing
-    );
+    // done:true line omitted — stream just ends without completing
+    let body = "{\"model\":\"llama3\",\"created_at\":\"\",\"message\":{\"role\":\"assistant\",\"content\":\"token1\"},\"done\":false}\n";
 
     let _mock = server
         .mock("POST", "/api/chat")
@@ -329,10 +326,7 @@ async fn test_stream_error_emits_chat_error() {
     // The None branch in streaming.rs is reached, no chat:done should fire.
     // For a real byte-level error we rely on the Some(Err(e)) branch; simulate by making the
     // server close the connection after the first chunk (no done line).
-    let body = concat!(
-        "{\"model\":\"llama3\",\"created_at\":\"\",\"message\":{\"role\":\"assistant\",\"content\":\"hi\"},\"done\":false}\n",
-        "not-valid-json\n",
-    );
+    let body = "{\"model\":\"llama3\",\"created_at\":\"\",\"message\":{\"role\":\"assistant\",\"content\":\"hi\"},\"done\":false}\nnot-valid-json\n";
 
     let _mock = server
         .mock("POST", "/api/chat")

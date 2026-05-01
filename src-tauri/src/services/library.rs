@@ -121,7 +121,7 @@ pub(crate) fn parse_library_html(html: &str) -> Vec<LibraryModel> {
     let mut models = Vec::new();
     for cap in RE_MODEL.captures_iter(html) {
         let slug = cap["slug"].to_string();
-        let full_html = cap.get(0).unwrap().as_str();
+        let full_html = &cap[0];
 
         let name = RE_NAME
             .captures(full_html)

@@ -93,6 +93,37 @@ fn override_file_content(resolved_path: &str) -> String {
     format!("[Service]\nEnvironment=\"OLLAMA_MODELS={resolved_path}\"\n")
 }
 
+/// Reload the user systemd daemon and restart the ollama user service.
+/// Returns `Ok(true)` if the restart succeeded, `Ok(false)` if the restart
+/// command ran but exited non-zero, and `Err` if the daemon-reload failed.
+async fn restart_user_service() -> Result<bool, AppError> {
+    let reload_ok = Command::new("systemctl")
+        .args(["--user", "daemon-reload"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .await
+        .map(|s| s.success())
+        .unwrap_or(false);
+
+    if !reload_ok {
+        return Err(AppError::Service(
+            "systemctl --user daemon-reload failed".into(),
+        ));
+    }
+
+    let restarted = Command::new("systemctl")
+        .args(["--user", "restart", "ollama"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .await
+        .map(|s| s.success())
+        .unwrap_or(false);
+
+    Ok(restarted)
+}
+
 // ── Commands ───────────────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -177,29 +208,7 @@ async fn clear_user_service() -> Result<ApplyModelPathResult, AppError> {
     // Best-effort removal; if the file doesn't exist, that's fine.
     let _ = std::fs::remove_file(&override_path);
 
-    let reload_ok = Command::new("systemctl")
-        .args(["--user", "daemon-reload"])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .await
-        .map(|s| s.success())
-        .unwrap_or(false);
-
-    if !reload_ok {
-        return Err(AppError::Service(
-            "systemctl --user daemon-reload failed".into(),
-        ));
-    }
-
-    let restarted = Command::new("systemctl")
-        .args(["--user", "restart", "ollama"])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .await
-        .map(|s| s.success())
-        .unwrap_or(false);
+    let restarted = restart_user_service().await?;
 
     Ok(ApplyModelPathResult {
         service_type: "user".into(),
@@ -254,29 +263,7 @@ async fn apply_user_service(resolved_path: &str) -> Result<ApplyModelPathResult,
         override_file_content(resolved_path),
     )?;
 
-    let reload_ok = Command::new("systemctl")
-        .args(["--user", "daemon-reload"])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .await
-        .map(|s| s.success())
-        .unwrap_or(false);
-
-    if !reload_ok {
-        return Err(AppError::Service(
-            "systemctl --user daemon-reload failed".into(),
-        ));
-    }
-
-    let restarted = Command::new("systemctl")
-        .args(["--user", "restart", "ollama"])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .await
-        .map(|s| s.success())
-        .unwrap_or(false);
+    let restarted = restart_user_service().await?;
 
     Ok(ApplyModelPathResult {
         service_type: "user".into(),

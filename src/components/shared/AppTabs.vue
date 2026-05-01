@@ -77,12 +77,4 @@ defineEmits(["update:modelValue"]);
   color: var(--text-muted);
   background: var(--bg-hover);
 }
-
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
 </style>

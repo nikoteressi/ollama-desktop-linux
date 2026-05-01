@@ -10,11 +10,11 @@ pub async fn report_active_view(
 ) -> Result<(), AppError> {
     *state
         .is_chat_view
-        .lock()
+        .write()
         .map_err(|_| AppError::Internal("is_chat_view lock poisoned".into()))? = is_chat_view;
     *state
         .active_conversation_id
-        .lock()
+        .write()
         .map_err(|_| AppError::Internal("active_conversation_id lock poisoned".into()))? =
         conversation_id;
     Ok(())

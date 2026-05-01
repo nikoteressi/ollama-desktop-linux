@@ -9,7 +9,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { setActivePinia, createPinia } from "pinia";
-import SettingsPage from "./SettingsPage.vue";
+import ModelPathSettings from "../components/settings/ModelPathSettings.vue";
 import { useSettingsStore } from "../stores/settings";
 import { useHostStore } from "../stores/hosts";
 import type { Host } from "../types/hosts";
@@ -33,14 +33,8 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
 }));
 
 // Stub heavy child components that have their own Tauri / store dependencies
-vi.mock("../components/settings/HostSettings.vue", () => ({
-  default: { template: "<div />" },
-}));
-vi.mock("../components/shared/AppTabs.vue", () => ({
-  default: { template: "<div><slot /></div>" },
-}));
-vi.mock("../components/settings/AccountSettings.vue", () => ({
-  default: { template: "<div />" },
+vi.mock("../components/settings/SettingsRow.vue", () => ({
+  default: { template: "<div><slot name='control' /></div>" },
 }));
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -63,19 +57,9 @@ function makeHost(
   };
 }
 
-/** Mount SettingsPage against the active Pinia (set in beforeEach). */
+/** Mount ModelPathSettings against the active Pinia (set in beforeEach). */
 function mountPage() {
-  return mount(SettingsPage, {
-    global: {
-      stubs: {
-        SettingsRow: { template: "<div><slot name='control' /></div>" },
-        ToggleSwitch: true,
-        SettingsSlider: true,
-        ConfirmationModal: true,
-        Transition: { template: "<div><slot /></div>" },
-      },
-    },
-  });
+  return mount(ModelPathSettings);
 }
 
 // Internal-ref shape exposed through wrapper.vm proxy
