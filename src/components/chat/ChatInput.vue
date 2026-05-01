@@ -322,6 +322,42 @@ const { maxContext, contextTokens, isContextNearFull } = useContextWindow({
   isStreaming: isCurrentChatStreaming,
 });
 
+// ---- Undo/redo history ----
+// WebKitGTK on Wayland doesn't route Ctrl+Z to the textarea's native undo stack,
+// and execCommand("undo") conflicts with Vue's v-model (Vue resets the value on
+// the next re-render). We maintain our own history keyed to inputContent.
+const undoHistory: string[] = [""];
+const redoHistory: string[] = [];
+let snapshotTimer: ReturnType<typeof setTimeout> | null = null;
+
+function saveSnapshot() {
+  const v = inputContent.value;
+  if (v !== undoHistory[undoHistory.length - 1]) {
+    undoHistory.push(v);
+    redoHistory.length = 0;
+    if (undoHistory.length > 100) undoHistory.shift();
+  }
+}
+
+function scheduleSnapshot() {
+  if (snapshotTimer) clearTimeout(snapshotTimer);
+  snapshotTimer = setTimeout(saveSnapshot, 300);
+}
+
+function doUndo() {
+  saveSnapshot();
+  if (undoHistory.length <= 1) return;
+  redoHistory.push(undoHistory.pop()!);
+  inputContent.value = undoHistory[undoHistory.length - 1];
+}
+
+function doRedo() {
+  if (redoHistory.length === 0) return;
+  const next = redoHistory.pop()!;
+  undoHistory.push(next);
+  inputContent.value = next;
+}
+
 // ---- Submit ----
 function handleEnter(e: KeyboardEvent) {
   if (!e.shiftKey) {
@@ -333,15 +369,13 @@ function handleEnter(e: KeyboardEvent) {
 function handleTextareaKeydown(e: KeyboardEvent) {
   const ctrl = e.ctrlKey || e.metaKey;
   if (ctrl && e.key === "z" && !e.shiftKey) {
-    // WebKitGTK on Wayland doesn't route Ctrl+Z to the native textarea undo;
-    // execCommand still works and talks directly to the browser's undo history.
     e.preventDefault();
-    document.execCommand("undo");
+    doUndo();
     return;
   }
   if (ctrl && e.key === "z" && e.shiftKey) {
     e.preventDefault();
-    document.execCommand("redo");
+    doRedo();
     return;
   }
   if (e.key === "Enter") {
@@ -575,6 +609,7 @@ onBeforeUnmount(() => {
       <textarea
         data-testid="chat-input"
         v-model="inputContent"
+        @input="scheduleSnapshot"
         @keydown="handleTextareaKeydown"
         placeholder="Type a message…"
         class="w-full bg-transparent focus:outline-none resize-none overflow-hidden text-[var(--text)] text-[13.5px] leading-relaxed placeholder-[var(--text-dim)] max-h-48 min-h-[36px]"
