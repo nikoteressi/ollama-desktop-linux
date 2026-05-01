@@ -9,6 +9,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Documentation: VitePress site deployed to https://nikoteressi.github.io/alpaka-desktop — landing page with hero, feature grid, demo gallery (placeholder), and install tabs; full user guide (Getting Started, Chat, Models, Settings hierarchy with three-layer diagram, Ollama Cloud, Multi-Host, System Integration, Keyboard Shortcuts); developer reference (Architecture, streaming pipeline deep-dive, Frontend reference, Contributing guide); `docs.yml` CI workflow builds and deploys on every push to `main`
+
 ### Changed
 - Dependencies: bump `@vueuse/core` 11→14, `shiki` 1→4, `vue-tsc` 2→3; upgrade Rust crates `rusqlite` 0.31→0.39, `thiserror` 1→2, `mockall` 0.13→0.14; upgrade GitHub Actions `actions/checkout` v5→v6, `pnpm/action-setup` v4→v6, `softprops/action-gh-release` v2→v3; remove unused `vue-i18n` dependency
 
