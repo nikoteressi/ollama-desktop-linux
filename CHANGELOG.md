@@ -11,6 +11,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 - Documentation: VitePress site deployed to https://nikoteressi.github.io/alpaka-desktop — landing page with hero, feature grid, demo gallery (placeholder), and install tabs; full user guide (Getting Started, Chat, Models, Settings hierarchy with three-layer diagram, Ollama Cloud, Multi-Host, System Integration, Keyboard Shortcuts); developer reference (Architecture, streaming pipeline deep-dive, Frontend reference, Contributing guide); `docs.yml` CI workflow builds and deploys on every push to `main`
+- Chat: conversation search in sidebar — `Ctrl+K` or the search icon button opens an inline search input that filters conversations by title; search icon is always visible at narrow sidebar widths, X button always visible when search is open
+- Chat: `Ctrl+M` opens the model switcher dropdown via `appEvents` bus
+- Chat: Tauri native drag-drop for images and text files into the chat input — replaces the broken `Ctrl+V` paste path on WebKitGTK/Wayland
 
 ### Changed
 - Dependencies: bump `@vueuse/core` 11→14, `shiki` 1→4, `vue-tsc` 2→3; upgrade Rust crates `rusqlite` 0.31→0.39, `thiserror` 1→2, `mockall` 0.13→0.14; upgrade GitHub Actions `actions/checkout` v5→v6, `pnpm/action-setup` v4→v6, `softprops/action-gh-release` v2→v3; remove unused `vue-i18n` dependency
@@ -22,6 +25,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CI: cache `tauri-driver` binary across e2e jobs keyed on `Cargo.lock` hash — avoids recompiling from source on every run when the driver version hasn't changed
 - CI: release gate now also requires "Spell Check (typos)" and "E2E Smoke Tests" to pass before proceeding with artifact build and publish
 - SonarCloud: simplify two regular expressions in `MessageBubble.vue` (lines 75 and 182) from complexity 25/23 to below the allowed threshold of 20 by extracting `<tool_call>` attribute parsing into secondary regex calls
+- Chat: `Shift+Enter` now inserts a newline in the chat textarea instead of submitting
+- Chat: `Ctrl+Z` / `Ctrl+Shift+Z` undo/redo in the chat textarea — custom history stack compatible with Vue v-model and WebKitGTK (replaces broken `execCommand` approach)
+- Chat: `Ctrl+Shift+C` now copies the last assistant response even when the chat textarea is focused
+- Chat: `Ctrl+H` now navigates directly to the Hosts/Connectivity settings tab
+
+### Removed
+- Chat: `Ctrl+V` paste support removed — was broken on WebKitGTK/Wayland; native drag-drop replaces it
+- `tauri-plugin-clipboard-manager` dependency removed — no longer needed after dropping `Ctrl+V`
 
 ---
 
