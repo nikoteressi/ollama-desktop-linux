@@ -427,7 +427,7 @@ jobs:
           shared-key: e2e
 
       - name: Cache tauri-driver binary
-        uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         id: cache-tauri-driver-smoke
         with:
           path: ~/.cargo/bin/tauri-driver
@@ -508,7 +508,7 @@ jobs:
           shared-key: e2e
 
       - name: Cache tauri-driver binary
-        uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         id: cache-tauri-driver-integration
         with:
           path: ~/.cargo/bin/tauri-driver
