@@ -14,7 +14,7 @@ hero:
       link: https://github.com/nikoteressi/alpaka-desktop/releases/latest
     - theme: alt
       text: Read the Docs
-      link: /alpaka-desktop/guide/
+      link: /guide/
     - theme: alt
       text: View on GitHub
       link: https://github.com/nikoteressi/alpaka-desktop
