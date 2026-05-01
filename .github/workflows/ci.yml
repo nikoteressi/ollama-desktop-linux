@@ -82,35 +82,40 @@ jobs:
     name: Security Audit
     runs-on: ubuntu-22.04
     needs: changes
-    if: needs.changes.outputs.rust == 'true'
+    if: needs.changes.outputs.rust == 'true' || needs.changes.outputs.frontend == 'true'
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
 
       - name: Install Rust stable
+        if: needs.changes.outputs.rust == 'true'
         uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # @stable (master)
         with:
           toolchain: stable
 
       - name: Cache Rust artifacts
+        if: needs.changes.outputs.rust == 'true'
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           workspaces: src-tauri -> target
           shared-key: ci
 
       - name: Install audit tools
+        if: needs.changes.outputs.rust == 'true'
         uses: taiki-e/install-action@1f2425cdb59f8fffb99ee16a5968edf6f57a2b93 # v2
         with:
           tool: cargo-audit,cargo-deny
 
       - name: Run cargo audit
+        if: needs.changes.outputs.rust == 'true'
         # --deny warnings would block on unmaintained GTK3 transitive deps
         # (atk, gdk-sys, etc.) which Tauri cannot yet update.
         run: cargo audit
         working-directory: src-tauri
 
       - name: Run cargo deny
+        if: needs.changes.outputs.rust == 'true'
         run: cargo deny check
         working-directory: src-tauri
 
@@ -421,7 +426,15 @@ jobs:
           workspaces: src-tauri -> target
           shared-key: e2e
 
+      - name: Cache tauri-driver binary
+        uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+        id: cache-tauri-driver-smoke
+        with:
+          path: ~/.cargo/bin/tauri-driver
+          key: tauri-driver-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+
       - name: Install tauri-driver
+        if: steps.cache-tauri-driver-smoke.outputs.cache-hit != 'true'
         run: cargo install tauri-driver --locked
 
       - name: Setup pnpm
@@ -460,7 +473,11 @@ jobs:
   e2e-integration:
     name: E2E Integration Tests
     runs-on: ubuntu-22.04
-    if: github.event_name == 'push' && contains(fromJSON('["develop","main"]'), github.ref_name)
+    needs: [changes, build-check]
+    if: |
+      github.event_name == 'push' &&
+      contains(fromJSON('["develop","main"]'), github.ref_name) &&
+      needs.build-check.result == 'success'
     permissions:
       contents: read
     steps:
@@ -490,7 +507,15 @@ jobs:
           workspaces: src-tauri -> target
           shared-key: e2e
 
+      - name: Cache tauri-driver binary
+        uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+        id: cache-tauri-driver-integration
+        with:
+          path: ~/.cargo/bin/tauri-driver
+          key: tauri-driver-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+
       - name: Install tauri-driver
+        if: steps.cache-tauri-driver-integration.outputs.cache-hit != 'true'
         run: cargo install tauri-driver --locked
 
       - name: Setup pnpm

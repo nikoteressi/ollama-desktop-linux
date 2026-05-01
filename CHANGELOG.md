@@ -9,6 +9,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- Security: bump transitive `fast-xml-parser` to 5.7.0 (Dependabot #13 — XML comment/CDATA injection) and `tmp` to 0.2.4 (Dependabot #11 — symlink write vulnerability) via pnpm overrides; both packages are dev-only, never shipped in the app bundle
+- Security: `security-audit` CI job now also runs `pnpm audit` for frontend-only PRs (previously only triggered when Rust files changed, leaving npm dep changes unaudited)
+- CI: `e2e-integration` now depends on `build-check` success — broken builds no longer trigger a wasteful full E2E + Ollama pull cycle
+- CI: cache `tauri-driver` binary across e2e jobs keyed on `Cargo.lock` hash — avoids recompiling from source on every run when the driver version hasn't changed
+- CI: release gate now also requires "Spell Check (typos)" to pass before proceeding with artifact build and publish
+- SonarCloud: simplify two regular expressions in `MessageBubble.vue` (lines 75 and 182) from complexity 25/23 to below the allowed threshold of 20 by extracting `<tool_call>` attribute parsing into secondary regex calls
+
 ---
 
 ## [1.2.0] - 2026-05-01

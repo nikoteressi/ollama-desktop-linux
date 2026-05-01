@@ -72,7 +72,7 @@ function parseProcessedParts(
   const parts: MessagePart[] = [];
   // Standard regex for full parsing (used for static messages and volatile tails)
   const blockRegex =
-    /```(\w+)?\n(.*?)(?:```|$)|<think.*?<\/think>|<tool_call\s+name="([^"]+)"\s+query="([^"]+)">(.*?)<\/tool_call>/gis;
+    /```(\w+)?\n(.*?)(?:```|$)|<think.*?<\/think>|<tool_call\b[^>]*>.*?<\/tool_call>/gis;
   let lastIndex = 0;
   let match;
 
@@ -103,11 +103,14 @@ function parseProcessedParts(
         language: timeMatch ? timeMatch[1] : undefined,
       });
     } else if (matchText.toLowerCase().startsWith("<tool_call")) {
+      const nameM = matchText.match(/\bname="([^"]*)"/i);
+      const queryM = matchText.match(/\bquery="([^"]*)"/i);
+      const innerM = matchText.match(/>(.*?)<\/tool_call>$/is);
       parts.push({
         type: "tool",
-        toolName: match[3],
-        toolQuery: match[4],
-        content: match[5] || "",
+        toolName: nameM?.[1],
+        toolQuery: queryM?.[1],
+        content: innerM?.[1] || "",
       });
     } else if (matchText.startsWith("```")) {
       parts.push({
@@ -150,11 +153,14 @@ function parseBlockMatch(match: RegExpExecArray): MessagePart | null {
     };
   }
   if (matchText.toLowerCase().startsWith("<tool_call")) {
+    const nameM = matchText.match(/\bname="([^"]*)"/i);
+    const queryM = matchText.match(/\bquery="([^"]*)"/i);
+    const innerM = matchText.match(/>(.*?)<\/tool_call>$/is);
     return {
       type: "tool",
-      toolName: match[3],
-      toolQuery: match[4],
-      content: match[5] || "",
+      toolName: nameM?.[1],
+      toolQuery: queryM?.[1],
+      content: innerM?.[1] || "",
     };
   }
   if (matchText.startsWith("```")) {
@@ -179,7 +185,7 @@ const { pause, resume, isActive } = useRafFn(
 
     // Incremental Update Logic — only look for *fully closed* blocks to stabilize them
     const stableBlockRegex =
-      /```(\w+)?\n(.*?)```|<think.*?<\/think>|<tool_call\s+name="([^"]+)"\s+query="([^"]+)">(.*?)<\/tool_call>/gis;
+      /```(\w+)?\n(.*?)```|<think.*?<\/think>|<tool_call\b[^>]*>.*?<\/tool_call>/gis;
     stableBlockRegex.lastIndex = lastStableIndex;
     let match;
 
