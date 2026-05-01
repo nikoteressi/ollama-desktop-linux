@@ -8,10 +8,15 @@
       font-family: var(--sans);
     "
   >
-    <!-- 48px Icon strip -->
+    <!-- 48px Icon strip — hidden in compact mode -->
     <div
-      class="flex-shrink-0 w-12 flex flex-col items-center pt-2 pb-2 gap-1 select-none"
-      style="border-right: 1px solid var(--border); background: var(--bg-base)"
+      class="flex-shrink-0 flex flex-col items-center pt-2 pb-2 gap-1 select-none overflow-hidden transition-[width] duration-[180ms]"
+      :class="settingsStore.compactMode ? 'w-0' : 'w-12'"
+      :style="
+        settingsStore.compactMode
+          ? ''
+          : 'border-right: 1px solid var(--border); background: var(--bg-base)'
+      "
     >
       <!-- Sidebar toggle -->
       <button
@@ -131,6 +136,7 @@ import { useSettingsStore } from "./stores/settings";
 import { useAuthStore } from "./stores/auth";
 import { useAppOrchestration } from "./composables/useAppOrchestration";
 import { useStreamingEvents } from "./composables/useStreamingEvents";
+import { useKeyboard } from "./composables/useKeyboard";
 import {
   IconNewChat,
   IconLaunch,
@@ -147,6 +153,8 @@ const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
 const orchestration = useAppOrchestration();
 const { init: initStreamListeners } = useStreamingEvents();
+const { cleanup: cleanupKeyboard } = useKeyboard();
+onUnmounted(() => cleanupKeyboard());
 
 // Report active view to backend for smart notifications
 watch(
@@ -172,7 +180,7 @@ watch(
 );
 
 const sidebarOpen = computed({
-  get: () => !settingsStore.sidebarCollapsed,
+  get: () => !settingsStore.sidebarCollapsed && !settingsStore.compactMode,
   set: (val: boolean) => settingsStore.updateSetting("sidebarCollapsed", !val),
 });
 const sidebarWidth = ref(220);
