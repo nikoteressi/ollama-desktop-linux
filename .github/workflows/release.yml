@@ -25,20 +25,55 @@ jobs:
         run: |
           set -euo pipefail
           REQUIRED=("Build Check" "Test and Coverage" "Security Audit")
+          TIMEOUT=1800
+          POLL_INTERVAL=30
+          DEADLINE=$(( $(date +%s) + TIMEOUT ))
 
           echo "Checking CI status for commit ${SHA} in ${REPO}..."
-          RESULT=$(gh api "repos/${REPO}/commits/${SHA}/check-runs?filter=latest&per_page=100")
 
-          ALL_PASS=true
-          for CHECK in "${REQUIRED[@]}"; do
-            CONCLUSION=$(echo "$RESULT" | jq -r --arg name "$CHECK" \
-              '[.check_runs[] | select(.name == $name)] | last | .conclusion // "not found"')
-            if [[ "$CONCLUSION" == "success" ]]; then
-              echo "PASS: ${CHECK}"
-            else
-              echo "FAIL: ${CHECK} — conclusion=${CONCLUSION}"
-              ALL_PASS=false
+          while true; do
+            RESULT=$(gh api "repos/${REPO}/commits/${SHA}/check-runs?filter=latest&per_page=100")
+
+            ALL_PASS=true
+            PENDING=()
+
+            for CHECK in "${REQUIRED[@]}"; do
+              # Distinguish absent (not yet queued), pending (null conclusion = in-progress),
+              # and a real conclusion so we don't fail-fast on a check that hasn't started.
+              STATUS=$(echo "$RESULT" | jq -r --arg name "$CHECK" \
+                'if ([.check_runs[] | select(.name == $name)] | length) == 0
+                 then "absent"
+                 else ([.check_runs[] | select(.name == $name)] | last | .conclusion // "pending")
+                 end')
+              case "$STATUS" in
+                success)
+                  echo "PASS: ${CHECK}" ;;
+                pending|absent)
+                  echo "WAIT: ${CHECK} — ${STATUS}"
+                  PENDING+=("$CHECK") ;;
+                *)
+                  echo "FAIL: ${CHECK} — conclusion=${STATUS}"
+                  ALL_PASS=false ;;
+              esac
+            done
+
+            # A check already failed — no point waiting for the rest.
+            if [[ "$ALL_PASS" == "false" ]]; then
+              break
             fi
+
+            # All required checks have a final conclusion.
+            if [[ ${#PENDING[@]} -eq 0 ]]; then
+              break
+            fi
+
+            if (( $(date +%s) >= DEADLINE )); then
+              echo "Timeout: checks still pending/absent after ${TIMEOUT}s: ${PENDING[*]}"
+              exit 1
+            fi
+
+            echo "Waiting ${POLL_INTERVAL}s for ${#PENDING[@]} check(s): ${PENDING[*]}..."
+            sleep "$POLL_INTERVAL"
           done
 
           if [[ "$ALL_PASS" != "true" ]]; then
