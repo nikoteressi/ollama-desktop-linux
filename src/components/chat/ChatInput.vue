@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import { open } from "@tauri-apps/plugin-dialog";
 import { tauriApi } from "../../lib/tauri";
 import { useChatStore } from "../../stores/chat";
@@ -408,7 +408,7 @@ onMounted(() => {
   );
 });
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
   appEvents.removeEventListener(
     APP_EVENT.OPEN_MODEL_SWITCHER,
     onOpenModelSwitcher,

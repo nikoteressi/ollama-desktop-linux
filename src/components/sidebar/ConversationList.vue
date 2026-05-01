@@ -44,24 +44,25 @@
 
     <!-- Search icon when closed -->
     <div v-else class="flex justify-end px-2 pt-1">
-      <button
-        @click="openSearch"
-        class="p-1 rounded text-[var(--text-dim)] hover:text-[var(--text)] hover:bg-[var(--bg-active)] transition-colors cursor-pointer"
-        title="Search conversations (Ctrl+K)"
-      >
-        <svg
-          class="w-3.5 h-3.5"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+      <CustomTooltip text="Search conversations (Ctrl+K)">
+        <button
+          @click="openSearch"
+          class="p-1 rounded text-[var(--text-dim)] hover:text-[var(--text)] hover:bg-[var(--bg-active)] transition-colors cursor-pointer"
         >
-          <circle cx="11" cy="11" r="8" />
-          <path d="M21 21l-4.35-4.35" />
-        </svg>
-      </button>
+          <svg
+            class="w-3.5 h-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>
+        </button>
+      </CustomTooltip>
     </div>
 
     <DynamicScroller
@@ -401,6 +402,10 @@ const searchQuery = ref("");
 const searchInput = ref<HTMLInputElement | null>(null);
 
 function openSearch() {
+  if (isSearchOpen.value) {
+    searchInput.value?.focus();
+    return;
+  }
   isSearchOpen.value = true;
   nextTick(() => searchInput.value?.focus());
 }
