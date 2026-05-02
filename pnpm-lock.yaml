@@ -61,9 +61,6 @@ importers:
       katex:
         specifier: ^0.16.0
         version: 0.16.43
-      lodash.throttle:
-        specifier: ^4.1.1
-        version: 4.1.1
       markdown-it:
         specifier: ^14.1.0
         version: 14.1.1
@@ -92,9 +89,6 @@ importers:
       '@tauri-apps/cli':
         specifier: ^2.0.0
         version: 2.10.1
-      '@types/lodash.throttle':
-        specifier: ^4.1.9
-        version: 4.1.9
       '@typescript-eslint/eslint-plugin':
         specifier: ^8.0.0
         version: 8.57.2(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
@@ -1322,12 +1316,6 @@ packages:
 
   '@types/linkify-it@5.0.0':
     resolution: {integrity: sha512-sVDA58zAw4eWAffKOaQH5/5j3XeayukzDk+ewSsnv3p4yJEZHCCzMDiZM8e0OUrRvmpGZ85jf4yDHkHsgBNr9Q==}
-
-  '@types/lodash.throttle@4.1.9':
-    resolution: {integrity: sha512-PCPVfpfueguWZQB7pJQK890F2scYKoDUL3iM522AptHWn7d5NQmeS/LTEHIcLr5PaTzl3dK2Z0xSUHHTHwaL5g==}
-
-  '@types/lodash@4.17.24':
-    resolution: {integrity: sha512-gIW7lQLZbue7lRSWEFql49QJJWThrTFFeIMJdp3eH4tKoxm1OvEPg02rm4wCCSHS0cL3/Fizimb35b7k8atwsQ==}
 
   '@types/markdown-it@14.1.2':
     resolution: {integrity: sha512-promo4eFwuiW+TfGxhi+0x3czqTYJkG8qB17ZUJiVF10Xm7NLVRSLUsfRTU/6h1e24VvRnXCx+hG7li58lkzog==}
@@ -2983,9 +2971,6 @@ packages:
 
   lodash.pickby@4.6.0:
     resolution: {integrity: sha512-AZV+GsS/6ckvPOVQPXSiFFacKvKB4kOQu6ynt9wz0F3LO4R9Ij4K1ddYsIytDpSgLz88JHd9P+oaLeej5/Sl7Q==}
-
-  lodash.throttle@4.1.1:
-    resolution: {integrity: sha512-wIkUCfVKpVsWo3JSZlc+8MB5it+2AN5W8J7YVMST30UrvcQNZ1Okbj+rbVniijTWE6FGYy4XJq/rHkas8qJMLQ==}
 
   lodash.union@4.6.0:
     resolution: {integrity: sha512-c4pB2CdGrGdjMKYLA+XiRDO7Y0PRQbm/Gzg8qMj+QH+pFVAoTp5sBpO0odL3FjoPCGjK96p6qsP+yQoiLoOBcw==}
@@ -5133,12 +5118,6 @@ snapshots:
 
   '@types/linkify-it@5.0.0': {}
 
-  '@types/lodash.throttle@4.1.9':
-    dependencies:
-      '@types/lodash': 4.17.24
-
-  '@types/lodash@4.17.24': {}
-
   '@types/markdown-it@14.1.2':
     dependencies:
       '@types/linkify-it': 5.0.0
@@ -7103,8 +7082,6 @@ snapshots:
   lodash.merge@4.6.2: {}
 
   lodash.pickby@4.6.0: {}
-
-  lodash.throttle@4.1.1: {}
 
   lodash.union@4.6.0: {}
 
