@@ -1,133 +1,115 @@
+<!-- markdownlint-disable MD033 MD041 -->
+
 <p align="center">
-  <img src="public/logo.png" alt="Alpaka Desktop" width="128">
+  <img src="public/logo.png" alt="Alpaka Desktop Logo" width="128">
 </p>
 
 <h1 align="center">Alpaka Desktop</h1>
 
 <p align="center">
-  A native desktop client for <a href="https://ollama.com">Ollama</a> — built with Tauri v2 and Vue 3.
+  <b>A native, first-class Ollama desktop client for Linux.</b><br/>
+  Built with Tauri v2 and Vue 3, designed for KDE Plasma and Wayland.
 </p>
 
+<!-- markdownlint-disable MD013 -->
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
-  <a href="https://github.com/nikoteressi/alpaka-desktop/releases/latest"><img src="https://img.shields.io/github/v/release/nikoteressi/alpaka-desktop?label=release" alt="Latest Release"></a>
-  <a href="https://github.com/nikoteressi/alpaka-desktop/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/nikoteressi/alpaka-desktop/release.yml?label=CI" alt="CI Status"></a>
+  <a href="https://github.com/nikoteressi/alpaka-desktop/releases/latest"><img src="https://img.shields.io/github/v/release/nikoteressi/alpaka-desktop?label=release&style=flat-square" alt="Latest Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
+  <a href="https://github.com/nikoteressi/alpaka-desktop/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/nikoteressi/alpaka-desktop/release.yml?label=CI&style=flat-square" alt="CI Status"></a>
+  <img src="https://img.shields.io/badge/platform-Linux-orange?style=flat-square" alt="Platform: Linux">
 </p>
+<!-- markdownlint-enable MD013 -->
 
 <br/>
 
-<p align="center">
-  <img src="docs/alpaka-desktop.png" alt="Alpaka Desktop Hero" width="100%">
-</p>
-
-<br/>
-
----
-
-## Features
-
-- **Local-first AI** — connects directly to your local Ollama instance; your conversations never leave your machine.
-- **Real-time token streaming** — smooth, latency-optimized SSE streaming with live markdown rendering.
-- **Thinking / reasoning blocks** — collapsible `<think>` panels for models that expose their chain of thought.
-- **Multi-host management** — add multiple Ollama endpoints, ping health status, and switch between them instantly.
-- **Hardware-aware model browser** — see model size, quantization, parameter count, and GPU/VRAM requirements at a glance.
-- **Folder context** — attach a local directory as context and include specific files in your prompt.
-- **Secure keyring integration** — API keys and OAuth tokens stored in the system Secret Service, never in SQLite.
-- **Native Linux UX** — system tray, desktop notifications, KDE Plasma / Wayland first-class support.
-- **Syntax highlighting + math** — code blocks powered by Shiki; LaTeX rendered via KaTeX.
+Alpaka Desktop is a local-first AI interface that brings the power of
+[Ollama](https://ollama.com) to your desktop with a native experience. It
+focuses on performance, privacy, and deep integration with the Linux desktop
+environment.
 
 ---
 
-## Installation
+## ✨ Features
 
-### AppImage (any distro)
+- **⚡ Real-time Streaming** — Token-by-token rendering with live Markdown,
+  Shiki syntax highlighting, and KaTeX math rendering.
+- **🧠 Thinking Blocks** — Collapsible `<think>` panels for models that expose
+  chain-of-thought reasoning (e.g., DeepSeek R1).
+- **🖥️ Multi-host Management** — Add multiple Ollama endpoints, monitor health
+  status/latency, and switch between them instantly.
+- **🔒 Secure Keyring** — API keys and OAuth tokens stored in the system Secret
+  Service (KWallet / GNOME Keyring).
+- **📦 Model Manager** — Pull, tag, favorite, and create custom models from
+  Modelfiles directly in the UI.
+- **🎛️ Three-layer Settings** — Granular control: Global defaults → Per-model
+  overrides → Per-chat adjustments.
+- **🌐 Web Search** — Built-in agentic tool-call loop via the Ollama Web Search
+  API with collapsible result cards.
+- **📁 Folder Context** — Attach a local directory as context and include
+  specific files in your prompt.
+- **🐧 Native Linux UX** — System tray, desktop notifications, systemd service
+  control, and first-class Wayland support.
 
-Download the latest `.AppImage` from the [Releases](https://github.com/nikoteressi/alpaka-desktop/releases/latest) page:
+---
+
+## 📺 See It In Action
+
+| Streaming Chat | Thinking Blocks |
+| :--- | :--- |
+| ![Streaming chat](docs/demo/streaming.gif) | ![Thinking blocks](docs/demo/thinking.gif) |
+
+---
+
+## 🚀 Quick Start
+
+### 📦 Installation
+
+#### **AppImage (Universal)**
+
+Download the latest `.AppImage` from
+[Releases](https://github.com/nikoteressi/alpaka-desktop/releases/latest),
+then:
 
 ```bash
 chmod +x alpaka-desktop_*.AppImage
-./alpaka-desktop_*.AppImage
+./alpaka-desktop_*.AppImage --appimage-integrate
 ```
 
-To integrate with your desktop launcher, run with `--appimage-integrate`.
-
-### Debian / Ubuntu — APT repository
-
-Add the repository once, then use `apt` like any other package:
+#### **Debian / Ubuntu (APT)**
 
 ```bash
-# Import signing key (Ubuntu 22.04+ / gpg 2.4+)
+# 1. Import signing key
 sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://nikoteressi.github.io/alpaka-desktop/apt/key.gpg | sudo tee /etc/apt/keyrings/alpaka-desktop.asc > /dev/null
+curl -fsSL https://nikoteressi.github.io/alpaka-desktop/apt/key.gpg | \
+  sudo tee /etc/apt/keyrings/alpaka-desktop.asc > /dev/null
 
-# Add repository (single line — copy the whole command)
-echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/alpaka-desktop.asc] https://nikoteressi.github.io/alpaka-desktop/apt stable main" | sudo tee /etc/apt/sources.list.d/alpaka-desktop.list
+# 2. Add repository
+echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/alpaka-desktop.asc] \
+  https://nikoteressi.github.io/alpaka-desktop/apt stable main" | \
+  sudo tee /etc/apt/sources.list.d/alpaka-desktop.list
 
-# Install
+# 3. Install
 sudo apt update && sudo apt install alpaka-desktop
 ```
 
-Future updates arrive automatically with `sudo apt upgrade`.
-
-**One-off .deb install** (no repository needed):
-```bash
-sudo dpkg -i alpaka-desktop_*_amd64.deb
-```
-
-### Arch Linux — AUR
+#### **Arch Linux (AUR)**
 
 ```bash
-yay -S alpaka-desktop-bin      # installs the pre-built AppImage
-# or
-yay -S alpaka-desktop-git      # builds from source
-```
-
-### Arch Linux — local pacman build
-
-Build a native `.pkg.tar.zst` directly from the repo (no AUR helper required):
-
-```bash
-git clone https://github.com/nikoteressi/alpaka-desktop.git
-cd alpaka-desktop
-./packaging/build-pacman.sh
-sudo pacman -U packaging/out/alpaka-desktop-*.pkg.tar.zst
+yay -S alpaka-desktop-bin
 ```
 
 ---
 
-## Build from Source
+## 🛠️ Build from Source
 
 ### Prerequisites
 
-**Rust (stable ≥ 1.77.2):**
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
+- **Rust** (stable ≥ 1.77.2)
+- **Node.js** (≥ 20) + **pnpm**
+- **Linux system dependencies**: `libwebkit2gtk-4.1-dev`,
+  `libappindicator3-dev`, `librsvg2-dev`
 
-**Node.js + pnpm:**
-```bash
-# Node.js 20 LTS via nvm, or your distro's package manager
-npm install -g pnpm
-```
-
-**Linux system dependencies (Ubuntu/Debian):**
-```bash
-sudo apt update && sudo apt install -y \
-  libwebkit2gtk-4.1-dev \
-  libappindicator3-dev \
-  librsvg2-dev \
-  patchelf \
-  libssl-dev \
-  libgtk-3-dev \
-  libayatana-appindicator3-dev
-```
-
-**Arch Linux:**
-```bash
-sudo pacman -S webkit2gtk-4.1 libappindicator-gtk3 librsvg
-```
-
-### Build
+### Steps
 
 ```bash
 git clone https://github.com/nikoteressi/alpaka-desktop.git
@@ -136,30 +118,25 @@ pnpm install
 pnpm tauri build
 ```
 
-The resulting AppImage and `.deb` will be in `src-tauri/target/release/bundle/`.
-
-### Development (hot reload)
-
-```bash
-pnpm tauri dev
-```
+Build artifacts can be found in `src-tauri/target/release/bundle/`.
 
 ---
 
-## Requirements
+## 📋 Requirements
 
-- Linux (x86_64)
-- [Ollama](https://ollama.com/download/linux) running locally or on a reachable host
-- A Secret Service provider for keyring (KWallet, GNOME Keyring, or `keepassxc` with DBus bridge)
-
----
-
-## Contributing
-
-Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, testing guidelines, and the PR workflow.
+- **Linux** (x86_64)
+- **Ollama** running locally or on a reachable host.
+- **Secret Service provider** for keyring (KWallet, GNOME Keyring, or
+  KeepassXC).
 
 ---
 
-## License
+## 🤝 Contributing
 
-[MIT](LICENSE) © 2026 Alpaka Desktop Contributors
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for
+details on our code of conduct and the process for submitting pull requests.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
+for details.
