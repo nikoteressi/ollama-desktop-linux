@@ -50,13 +50,27 @@ body:
       required: true
 
   - type: dropdown
+    id: installation
+    attributes:
+      label: How did you install Alpaka Desktop?
+      options:
+        - AppImage (Universal)
+        - APT Repository (Debian/Ubuntu)
+        - .deb package (manual install)
+        - AUR (alpaka-desktop-bin)
+        - Built from source
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
     id: os
     attributes:
       label: Linux distribution
       options:
         - Arch Linux
-        - Ubuntu 22.04
         - Ubuntu 24.04
+        - Ubuntu 22.04
         - Fedora
         - Debian
         - Other (describe below)

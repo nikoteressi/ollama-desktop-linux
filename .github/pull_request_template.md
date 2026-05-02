@@ -1,3 +1,5 @@
+# Pull Request Template
+
 ## What does this PR do?
 
 <!-- One sentence summary -->
@@ -17,12 +19,18 @@ Closes #<!-- issue number -->
 
 ## Test plan
 
-- [ ] 
-- [ ] 
+- [ ]
+- [ ]
+
+## Screenshots / Video (if applicable)
+
+<!-- Add images or a GIF to show the change in action -->
 
 ## Checklist
 
 - [ ] Branch follows GitFlow naming (`feature/`, `bugfix/`, `hotfix/`)
 - [ ] CI passes (`Security Audit` + `Build Check`)
+- [ ] New unit or integration tests added
 - [ ] `CHANGELOG.md` updated under `[Unreleased]` (user-visible changes only)
 - [ ] `docs/ARCHITECTURE.md` updated if commands, events, or schema changed
+- [ ] No new `any` types introduced in TypeScript

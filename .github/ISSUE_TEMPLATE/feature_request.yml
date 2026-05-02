@@ -27,6 +27,19 @@ body:
     validations:
       required: true
 
+  - type: dropdown
+    id: impact
+    attributes:
+      label: How important is this to you?
+      description: Is this a "nice to have" or a blocker for your workflow?
+      options:
+        - Critical (I can't use the app without it)
+        - High (Significant pain point)
+        - Medium (Would improve my workflow)
+        - Low (Minor convenience)
+    validations:
+      required: false
+
   - type: textarea
     id: alternatives
     attributes:
