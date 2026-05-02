@@ -620,41 +620,6 @@ function confirmRestore() {
   flex-direction: column;
 }
 
-.custom-input {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 12px;
-  outline: none;
-  transition: all 0.2s;
-}
-.custom-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-muted);
-}
-
-.custom-textarea {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 12.5px;
-  outline: none;
-  resize: none;
-  transition: all 0.2s;
-}
-.custom-textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-muted);
-}
-.custom-textarea:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .theme-option {
   background: var(--bg-base);
   border-color: var(--border);

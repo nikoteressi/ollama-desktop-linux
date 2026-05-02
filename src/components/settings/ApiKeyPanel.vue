@@ -243,23 +243,4 @@ async function confirmRemove() {
   display: flex;
   flex-direction: column;
 }
-
-.custom-input {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 12px;
-  outline: none;
-  transition: all 0.2s;
-}
-.custom-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-muted);
-}
-.custom-input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 </style>
