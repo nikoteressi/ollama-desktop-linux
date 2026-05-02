@@ -101,6 +101,17 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener("mousedown", handleClickOutside);
 });
+
+function ensureModelDropdownOpen() {
+  if (!isModelDropdownOpen.value) {
+    isModelDropdownOpen.value = true;
+  }
+  nextTick(() => {
+    modelSearchInput.value?.focus();
+  });
+}
+
+defineExpose({ openModelDropdown: ensureModelDropdownOpen });
 </script>
 
 <template>

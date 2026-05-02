@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import { open } from "@tauri-apps/plugin-dialog";
 import { tauriApi } from "../../lib/tauri";
 import { useChatStore } from "../../stores/chat";
@@ -11,6 +11,8 @@ import { useContextWindow } from "../../composables/useContextWindow";
 import { useAttachments } from "../../composables/useAttachments";
 import { useModelDefaults } from "../../composables/useModelDefaults";
 import { useDraftSync } from "../../composables/useDraftSync";
+import { useUndoHistory } from "../../composables/useUndoHistory";
+import { appEvents, APP_EVENT } from "../../lib/appEvents";
 import type { ChatOptions } from "../../types/settings";
 
 // Components
@@ -282,13 +284,31 @@ const {
   attachments,
   isDragging,
   handleFiles,
+  initDragDrop,
   removeAttachment,
   clearAttachments,
-  onDragEnter,
-  onDragLeave,
-  onDrop,
-  onPaste,
-} = useAttachments();
+} = useAttachments({
+  onLinkFile: async (path: string) => {
+    let targetId = activeConvId.value;
+    if (!targetId) return;
+    if (chatStore.isDraft) targetId = await persistDraft();
+    isLinking.value = true;
+    try {
+      const payload = await tauriApi.linkFolder(targetId, path);
+      chatStore.addFolderContext(targetId, {
+        id: payload.id,
+        name: path.split("/").pop() ?? path,
+        path,
+        content: payload.content,
+        tokens: payload.token_estimate,
+      });
+    } catch (err) {
+      console.error("Failed to link dropped file:", err);
+    } finally {
+      isLinking.value = false;
+    }
+  },
+});
 
 // ---- Context Window Tracking ----
 const { maxContext, contextTokens, isContextNearFull } = useContextWindow({
@@ -303,12 +323,40 @@ const { maxContext, contextTokens, isContextNearFull } = useContextWindow({
   isStreaming: isCurrentChatStreaming,
 });
 
-// ---- Drag and drop & Paste ----
-// Provided by useAttachments composable
+// ---- Undo/redo history ----
+// WebKitGTK on Wayland doesn't route Ctrl+Z to the textarea's native undo stack,
+// and execCommand("undo") conflicts with Vue's v-model (Vue resets the value on
+// the next re-render). We maintain our own history keyed to inputContent.
+const {
+  scheduleSnapshot,
+  undo: doUndo,
+  redo: doRedo,
+} = useUndoHistory(inputContent);
 
 // ---- Submit ----
 function handleEnter(e: KeyboardEvent) {
-  if (!e.shiftKey) handleSubmit();
+  if (!e.shiftKey) {
+    e.preventDefault();
+    handleSubmit();
+  }
+}
+
+function handleTextareaKeydown(e: KeyboardEvent) {
+  const ctrl = e.ctrlKey || e.metaKey;
+  const key = e.key.toLowerCase();
+  if (ctrl && key === "z" && !e.shiftKey) {
+    e.preventDefault();
+    doUndo();
+    return;
+  }
+  if (ctrl && key === "z" && e.shiftKey) {
+    e.preventDefault();
+    doRedo();
+    return;
+  }
+  if (e.key === "Enter") {
+    handleEnter(e);
+  }
 }
 
 function handleSubmit() {
@@ -393,18 +441,39 @@ const { clearDraft } = useDraftSync(
   },
 );
 
-onMounted(() => {
+const modelSelectorRef = ref<InstanceType<typeof ModelSelector> | null>(null);
+
+function onOpenModelSwitcher() {
+  modelSelectorRef.value?.openModelDropdown();
+}
+
+let unlistenDrag: (() => void) | undefined;
+
+onMounted(async () => {
   modelStore.fetchModels();
+  appEvents.addEventListener(
+    APP_EVENT.OPEN_MODEL_SWITCHER,
+    onOpenModelSwitcher,
+  );
+  try {
+    unlistenDrag = await initDragDrop();
+  } catch {
+    // drag-drop unavailable in non-Tauri context
+  }
+});
+
+onBeforeUnmount(() => {
+  appEvents.removeEventListener(
+    APP_EVENT.OPEN_MODEL_SWITCHER,
+    onOpenModelSwitcher,
+  );
+  unlistenDrag?.();
 });
 </script>
 
 <template>
   <div
     class="flex flex-col w-full max-w-4xl mx-auto px-4 pb-4 pt-2 transition-all duration-300"
-    @dragenter.prevent="onDragEnter"
-    @dragover.prevent
-    @dragleave.prevent="onDragLeave"
-    @drop.prevent="onDrop"
   >
     <SystemPromptPanel
       v-model:systemPromptDraft="systemPromptDraft"
@@ -516,9 +585,9 @@ onMounted(() => {
       <textarea
         data-testid="chat-input"
         v-model="inputContent"
-        @keydown.enter.prevent="handleEnter"
-        @paste="onPaste"
-        placeholder="Type a message or paste an image..."
+        @input="scheduleSnapshot"
+        @keydown="handleTextareaKeydown"
+        placeholder="Type a message…"
         class="w-full bg-transparent focus:outline-none resize-none overflow-hidden text-[var(--text)] text-[13.5px] leading-relaxed placeholder-[var(--text-dim)] max-h-48 min-h-[36px]"
         :disabled="isStreaming"
         rows="1"
@@ -727,6 +796,7 @@ onMounted(() => {
           </CustomTooltip>
 
           <ModelSelector
+            ref="modelSelectorRef"
             :activeModelName="activeModelName"
             :isActiveModelPulling="isActiveModelPulling"
             @select="selectModel"

@@ -1,5 +1,75 @@
 <template>
   <div class="flex flex-col min-h-0">
+    <!-- Sidebar header: title + search toggle -->
+    <div class="flex items-center gap-1 px-2 py-1.5 flex-shrink-0">
+      <template v-if="isSearchOpen">
+        <div
+          class="flex-1 min-w-0 flex items-center gap-1.5 px-2.5 py-1 bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg"
+        >
+          <svg
+            class="w-3 h-3 text-[var(--text-dim)] flex-shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>
+          <input
+            ref="searchInput"
+            v-model="searchQuery"
+            placeholder="Search…"
+            class="flex-1 min-w-0 bg-transparent text-[12px] text-[var(--text)] placeholder-[var(--text-dim)] outline-none"
+            @keydown.escape.prevent="closeSearch"
+          />
+        </div>
+        <button
+          @click="closeSearch"
+          class="flex-shrink-0 p-1 rounded text-[var(--text-dim)] hover:text-[var(--text)] hover:bg-[var(--bg-active)] transition-colors cursor-pointer"
+        >
+          <svg
+            class="w-3.5 h-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          >
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </template>
+      <template v-else>
+        <span
+          class="flex-1 min-w-0 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider px-1 select-none truncate"
+        >
+          Conversations
+        </span>
+        <CustomTooltip text="Search conversations (Ctrl+K)">
+          <button
+            @click="openSearch"
+            class="flex-shrink-0 p-1 rounded text-[var(--text-dim)] hover:text-[var(--text)] hover:bg-[var(--bg-active)] transition-colors cursor-pointer"
+          >
+            <svg
+              class="w-3.5 h-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+          </button>
+        </CustomTooltip>
+      </template>
+    </div>
+
     <DynamicScroller
       :items="flattenedItems"
       :min-item-size="32"
@@ -211,6 +281,7 @@ import CustomTooltip from "../shared/CustomTooltip.vue";
 import { useChatStore } from "../../stores/chat";
 import { useConversationLifecycle } from "../../composables/useConversationLifecycle";
 import { useConfirmationModal } from "../../composables/useConfirmationModal";
+import { appEvents, APP_EVENT } from "../../lib/appEvents";
 import type { Conversation } from "../../types/chat";
 
 interface ScrollerItem {
@@ -237,14 +308,20 @@ const unpinnedConversations = computed(() => {
   const base = props.filterIds
     ? chatStore.conversations.filter((c) => props.filterIds?.includes(c.id))
     : chatStore.conversations;
-  return base.filter((c) => !c.pinned);
+  const unpinned = base.filter((c) => !c.pinned);
+  if (!searchQuery.value.trim()) return unpinned;
+  const q = searchQuery.value.toLowerCase();
+  return unpinned.filter((c) => c.title.toLowerCase().includes(q));
 });
 
 const pinnedConversations = computed(() => {
   const base = props.filterIds
     ? chatStore.conversations.filter((c) => props.filterIds?.includes(c.id))
     : chatStore.conversations;
-  return base.filter((c) => c.pinned);
+  const pinned = base.filter((c) => c.pinned);
+  if (!searchQuery.value.trim()) return pinned;
+  const q = searchQuery.value.toLowerCase();
+  return pinned.filter((c) => c.title.toLowerCase().includes(q));
 });
 
 const chatGroups = computed(() => {
@@ -324,6 +401,25 @@ const activeConversationId = computed(() => chatStore.activeConversationId);
 const renamingId = ref<string | null>(null);
 const renameValue = ref("");
 const renameInput = ref<HTMLInputElement | null>(null);
+
+const isSearchOpen = ref(false);
+const searchQuery = ref("");
+const searchInput = ref<HTMLInputElement | null>(null);
+
+function openSearch() {
+  if (isSearchOpen.value) {
+    searchInput.value?.focus();
+    return;
+  }
+  isSearchOpen.value = true;
+  nextTick(() => searchInput.value?.focus());
+}
+
+function closeSearch() {
+  isSearchOpen.value = false;
+  searchQuery.value = "";
+}
+
 const menuOpenId = ref<string | null>(null);
 const menuPosition = ref<{ x: number; y: number } | null>(null);
 const menuRef = ref<HTMLElement | null>(null);
@@ -433,6 +529,7 @@ function closeMenu(e: MouseEvent) {
 
 onMounted(() => {
   document.addEventListener("mousedown", closeMenu);
+  appEvents.addEventListener(APP_EVENT.FOCUS_SEARCH, openSearch);
 
   // Setup infinite scroll
   observer = new IntersectionObserver(
@@ -459,6 +556,7 @@ function setSentinel(el: unknown) {
 
 onBeforeUnmount(() => {
   document.removeEventListener("mousedown", closeMenu);
+  appEvents.removeEventListener(APP_EVENT.FOCUS_SEARCH, openSearch);
   if (observer) observer.disconnect();
 });
 </script>
