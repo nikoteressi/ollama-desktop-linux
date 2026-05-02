@@ -6,10 +6,42 @@ export interface Attachment {
   data: Uint8Array | null;
 }
 
-export function useAttachments() {
+export interface AttachmentsOptions {
+  onLinkFile?: (path: string) => Promise<void>;
+}
+
+const IMAGE_EXTS = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".bmp",
+  ".tiff",
+]);
+
+const MIME_MAP: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".bmp": "image/bmp",
+  ".tiff": "image/tiff",
+};
+
+function extOf(path: string): string {
+  const dot = path.lastIndexOf(".");
+  return dot >= 0 ? path.slice(dot).toLowerCase() : "";
+}
+
+function mimeFromExt(ext: string): string {
+  return MIME_MAP[ext] ?? "application/octet-stream";
+}
+
+export function useAttachments(options: AttachmentsOptions = {}) {
   const attachments = ref<Attachment[]>([]);
   const isDragging = ref(false);
-  let dragCounter = 0;
 
   async function handleFiles(files: FileList | File[]) {
     for (let i = 0; i < files.length; i++) {
@@ -38,40 +70,37 @@ export function useAttachments() {
     attachments.value = [];
   }
 
-  function onDragEnter(e: DragEvent) {
-    if (e.dataTransfer?.types.includes("Files")) {
-      dragCounter++;
-      isDragging.value = true;
-    }
-  }
-
-  function onDragLeave() {
-    dragCounter--;
-    if (dragCounter === 0) isDragging.value = false;
-  }
-
-  async function onDrop(e: DragEvent) {
-    dragCounter = 0;
+  async function handleDroppedPaths(paths: string[]) {
     isDragging.value = false;
-    if (e.dataTransfer?.files) await handleFiles(e.dataTransfer.files);
+    await Promise.all(
+      paths.map(async (path) => {
+        const ext = extOf(path);
+        if (IMAGE_EXTS.has(ext)) {
+          const { readFile } = await import("@tauri-apps/plugin-fs");
+          const bytes = await readFile(path);
+          const name = path.split("/").pop() ?? "image";
+          const file = new File([bytes], name, { type: mimeFromExt(ext) });
+          const previewUrl = URL.createObjectURL(file);
+          attachments.value.push({ file, previewUrl, data: bytes });
+        } else if (options.onLinkFile) {
+          await options.onLinkFile(path);
+        }
+      }),
+    );
   }
 
-  async function onPaste(e: ClipboardEvent) {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-
-    const imageFiles: File[] = [];
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf("image") !== -1) {
-        const file = items[i].getAsFile();
-        if (file) imageFiles.push(file);
+  async function initDragDrop(): Promise<() => void> {
+    const { getCurrentWebviewWindow } =
+      await import("@tauri-apps/api/webviewWindow");
+    return getCurrentWebviewWindow().onDragDropEvent((event) => {
+      if (event.payload.type === "enter" || event.payload.type === "over") {
+        isDragging.value = true;
+      } else if (event.payload.type === "leave") {
+        isDragging.value = false;
+      } else if (event.payload.type === "drop") {
+        void handleDroppedPaths(event.payload.paths);
       }
-    }
-
-    if (imageFiles.length > 0) {
-      e.preventDefault();
-      await handleFiles(imageFiles);
-    }
+    });
   }
 
   return {
@@ -80,9 +109,7 @@ export function useAttachments() {
     handleFiles,
     removeAttachment,
     clearAttachments,
-    onDragEnter,
-    onDragLeave,
-    onDrop,
-    onPaste,
+    handleDroppedPaths,
+    initDragDrop,
   };
 }
