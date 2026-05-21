@@ -36,22 +36,22 @@ importers:
         specifier: ^2.5.1
         version: 2.5.1
       '@tauri-apps/plugin-global-shortcut':
-        specifier: ^2.0.0
+        specifier: ^2.3.1
         version: 2.3.1
       '@tauri-apps/plugin-notification':
-        specifier: ^2.0.0
+        specifier: ^2.3.3
         version: 2.3.3
       '@traptitech/markdown-it-katex':
         specifier: ^3.6.0
         version: 3.6.0
       '@types/katex':
-        specifier: ^0.16.0
+        specifier: ^0.16.8
         version: 0.16.8
       '@types/markdown-it':
-        specifier: ^14.1.0
+        specifier: ^14.1.2
         version: 14.1.2
       '@vueuse/core':
-        specifier: ^14.0.0
+        specifier: ^14.3.0
         version: 14.3.0(vue@3.5.33(typescript@5.9.3))
       codemirror:
         specifier: ^6.0.2
@@ -60,10 +60,10 @@ importers:
         specifier: ^3.4.2
         version: 3.4.2
       katex:
-        specifier: ^0.16.0
+        specifier: ^0.16.43
         version: 0.16.43
       markdown-it:
-        specifier: ^14.1.0
+        specifier: ^14.1.1
         version: 14.1.1
       markdown-it-footnote:
         specifier: ^4.0.0
@@ -72,13 +72,13 @@ importers:
         specifier: ^3.0.4
         version: 3.0.4(typescript@5.9.3)(vue@3.5.33(typescript@5.9.3))
       shiki:
-        specifier: ^4.0.0
+        specifier: ^4.0.2
         version: 4.0.2
       vue:
         specifier: ^3.5.33
         version: 3.5.33(typescript@5.9.3)
       vue-router:
-        specifier: ^4.4.0
+        specifier: ^4.6.4
         version: 4.6.4(vue@3.5.33(typescript@5.9.3))
       vue-virtual-scroller:
         specifier: ^3.0.4
@@ -103,7 +103,7 @@ importers:
         specifier: ^2.1.9
         version: 2.1.9(vitest@2.1.9)
       '@vitest/ui':
-        specifier: ^2.1.0
+        specifier: ^2.1.9
         version: 2.1.9(vitest@2.1.9)
       '@vue/test-utils':
         specifier: ^2.4.10
@@ -112,25 +112,25 @@ importers:
         specifier: ^0.9.1
         version: 0.9.1(typescript@5.9.3)(vue@3.5.33(typescript@5.9.3))
       '@wdio/cli':
-        specifier: ^9
+        specifier: ^9.27.1
         version: 9.27.1(@types/node@24.12.0)(expect-webdriverio@5.6.5)(puppeteer-core@21.11.0)
       '@wdio/local-runner':
-        specifier: ^9
+        specifier: ^9.27.1
         version: 9.27.1(@wdio/globals@9.27.1)(webdriverio@9.27.1(puppeteer-core@21.11.0))
       '@wdio/mocha-framework':
-        specifier: ^9
+        specifier: ^9.27.1
         version: 9.27.1
       '@wdio/spec-reporter':
-        specifier: ^9
+        specifier: ^9.27.1
         version: 9.27.1
       '@wdio/types':
-        specifier: ^9
+        specifier: ^9.27.1
         version: 9.27.1
       eslint:
-        specifier: ^9.0.0
+        specifier: ^9.39.4
         version: 9.39.4(jiti@2.6.1)
       eslint-plugin-vue:
-        specifier: ^9.0.0
+        specifier: ^9.33.0
         version: 9.33.0(eslint@9.39.4(jiti@2.6.1))
       happy-dom:
         specifier: ^20.8.9
@@ -139,7 +139,7 @@ importers:
         specifier: ^11.15.0
         version: 11.15.0
       prettier:
-        specifier: ^3.3.0
+        specifier: ^3.8.1
         version: 3.8.1
       standard-version:
         specifier: ^9.5.0
@@ -154,25 +154,25 @@ importers:
         specifier: ^4.21.0
         version: 4.21.0
       typescript:
-        specifier: ^5.6.0
+        specifier: ^5.9.3
         version: 5.9.3
       vite:
         specifier: ^6.4.2
         version: 6.4.2(@types/node@24.12.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)
       vitepress:
-        specifier: ^1.6.0
+        specifier: ^1.6.4
         version: 1.6.4(@algolia/client-search@5.52.0)(@types/node@24.12.0)(lightningcss@1.32.0)(postcss@8.5.14)(search-insights@2.17.3)(typescript@5.9.3)
       vitepress-plugin-mermaid:
         specifier: ^2.0.17
         version: 2.0.17(mermaid@11.15.0)(vitepress@1.6.4(@algolia/client-search@5.52.0)(@types/node@24.12.0)(lightningcss@1.32.0)(postcss@8.5.14)(search-insights@2.17.3)(typescript@5.9.3))
       vitest:
-        specifier: ^2.1.0
+        specifier: ^2.1.9
         version: 2.1.9(@types/node@24.12.0)(@vitest/ui@2.1.9)(happy-dom@20.8.9)(lightningcss@1.32.0)
       vue-tsc:
         specifier: ^3.2.8
         version: 3.2.8(typescript@5.9.3)
       webdriverio:
-        specifier: ^9
+        specifier: ^9.27.1
         version: 9.27.1(puppeteer-core@21.11.0)
 
 packages:
@@ -3480,9 +3480,9 @@ packages:
     engines: {node: '>=14'}
     hasBin: true
 
-  js-cookie@3.0.5:
-    resolution: {integrity: sha512-cEiJEAEoIbWfCZYKWhVwFuvPX1gETRYPw6LlaTKoxD3s2AkXzkCjnp6h0V77ozyqj0jakteJ4YqDJT830+lVGw==}
-    engines: {node: '>=14'}
+  js-cookie@3.0.7:
+    resolution: {integrity: sha512-z/wZZgDrkNV1eA0ULjM/F9/50Ya8fbzgKneSpoPsXSGd0KnpdtHfOZWK+GcwLk+EZbS4F9RBhU+K2RgzuDaItw==}
+    engines: {node: '>=20'}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -8608,10 +8608,10 @@ snapshots:
       config-chain: 1.1.13
       editorconfig: 1.0.7
       glob: 10.5.0
-      js-cookie: 3.0.5
+      js-cookie: 3.0.7
       nopt: 7.2.1
 
-  js-cookie@3.0.5: {}
+  js-cookie@3.0.7: {}
 
   js-tokens@4.0.0: {}
 
@@ -9276,7 +9276,7 @@ snapshots:
   proxy-agent@6.3.1:
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.3.4
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
       lru-cache: 7.18.3
