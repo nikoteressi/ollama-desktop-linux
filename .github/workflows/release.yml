@@ -122,7 +122,7 @@ jobs:
       # 2. Rust stable with Swatinem cache                                  #
       # ------------------------------------------------------------------ #
       - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@fcf085fcb4b4b8f63f96906cd713eb52181b5ea4  # stable (2025-04)
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # stable (2025-04)
         with:
           toolchain: stable
 
@@ -135,7 +135,7 @@ jobs:
       # 3. pnpm + Node.js 20                                                #
       # ------------------------------------------------------------------ #
       - name: Setup pnpm
-        uses: pnpm/action-setup@8912a9102ac27614460f54aedde9e1e7f9aec20d # v6.0.5
+        uses: pnpm/action-setup@739bfe42ca9233c5e6aca07c1a25a9d34aca49b0 # v6.0.7
         # No 'version' key — reads from package.json "packageManager" field
 
       - name: Setup Node.js 20
