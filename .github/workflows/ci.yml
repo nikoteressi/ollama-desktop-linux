@@ -104,7 +104,7 @@ jobs:
 
       - name: Install audit tools
         if: needs.changes.outputs.rust == 'true'
-        uses: taiki-e/install-action@c070f87102a1c75b3183910f391c1cb887fe13c8 # v2
+        uses: taiki-e/install-action@920ab1831fbf4fb3ef75c8ead83556c918bb7290 # v2
         with:
           tool: cargo-audit,cargo-deny
 
@@ -331,7 +331,7 @@ jobs:
 
       - name: Install coverage + test tools
         if: needs.changes.outputs.rust == 'true'
-        uses: taiki-e/install-action@c070f87102a1c75b3183910f391c1cb887fe13c8 # v2
+        uses: taiki-e/install-action@920ab1831fbf4fb3ef75c8ead83556c918bb7290 # v2
         with:
           tool: cargo-llvm-cov,cargo-nextest
 
