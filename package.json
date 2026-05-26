@@ -45,7 +45,7 @@
     "markdown-it": "^14.1.0",
     "markdown-it-footnote": "^4.0.0",
     "pinia": "^3.0.4",
-    "shiki": "^4.0.0",
+    "shiki": "^4.1.0",
     "vue": "^3.5.33",
     "vue-router": "^4.4.0",
     "vue-virtual-scroller": "^3.0.4"
